@@ -1,0 +1,13 @@
+{
+  "name": "task-tracker-dashboard-vercel",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Vercel-deployable version of the Task Tracker Dashboard: serverless functions under api/, Vercel Blob for daily snapshot storage, Vercel Cron for scheduled capture. See README.md for setup and how this differs from the local server.js version.",
+  "dependencies": {
+    "@vercel/blob": "latest"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

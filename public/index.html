@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Task Tracker Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='16' width='6' height='13' rx='1.5' fill='%232a78d6'/%3E%3Crect x='13' y='9' width='6' height='20' rx='1.5' fill='%23fab219'/%3E%3Crect x='23' y='3' width='6' height='26' rx='1.5' fill='%230ca30c'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="viz-root" id="app">
+    <header class="page-header">
+      <div class="brand-row">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <h1>Task Tracker Dashboard</h1>
+      </div>
+      <div class="header-actions">
+        <button class="live-toggle active" id="liveToggle" type="button" title="Auto-refreshes every 30s — click to pause">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span id="liveLabel">Live</span>
+        </button>
+        <span class="updated-at" id="updatedAt"></span>
+        <button class="btn btn-icon-only" id="refreshBtn" type="button" aria-label="Refresh" title="Refresh">
+          <svg class="btn-icon" id="refreshIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+          <span id="refreshLabel" class="sr-only">Refresh</span>
+        </button>
+      </div>
+    </header>
+
+    <nav class="tab-bar" id="tabBar" aria-label="Team selector">
+      <div class="tab-indicator" id="tabIndicator"></div>
+      <!-- tab buttons injected by app.js -->
+    </nav>
+
+    <section class="stat-row" id="statRow" aria-label="Current totals">
+      <!-- stat tiles injected by app.js -->
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2 id="chartTitle">Weekly breakdown</h2>
+        <div class="panel-actions">
+          <div class="seg-toggle" id="granularityToggle" aria-label="Chart granularity">
+            <button type="button" class="seg-btn active" data-granularity="weekly">Weekly</button>
+            <button type="button" class="seg-btn" data-granularity="daily">Daily</button>
+          </div>
+          <div class="legend" id="chartLegend"></div>
+          <button class="link-btn" id="toggleTableBtn" type="button">View as table</button>
+        </div>
+      </div>
+      <div id="chartWrap">
+        <svg id="weeklyChart" role="img" aria-label="Weekly task counts by status"></svg>
+        <div id="tooltip" class="tooltip" hidden></div>
+      </div>
+      <div id="weeklyTableWrap" hidden></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2 id="reportTitle">AI Report</h2>
+        <div class="panel-actions">
+          <div class="seg-toggle" id="reportModeToggle" aria-label="Report type">
+            <button type="button" class="seg-btn active" data-mode="summary">Summary</button>
+            <button type="button" class="seg-btn" data-mode="plan">Weekly Plan</button>
+            <button type="button" class="seg-btn" data-mode="eod">End of Day</button>
+          </div>
+          <select class="select-input" id="reportWeekSelect" aria-label="Week to summarize"></select>
+          <button class="btn btn-icon-only" id="reportPdfBtn" type="button" aria-label="Save as PDF" title="Save as PDF" hidden>
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0-4-4m4 4 4-4M5 21h14"/></svg>
+          </button>
+          <button class="btn btn-ai" id="reportBtn" type="button">
+            <svg class="btn-icon" id="reportIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+            <span id="reportLabel">Generate Report</span>
+          </button>
+        </div>
+      </div>
+      <div id="reportBody" class="report-body">
+        <div class="report-empty">
+          <div class="report-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg></div>
+          <p>Get an AI-written summary of this view's weekly data — highlights, risks, and a recommendation.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="teamPanel">
+      <div class="panel-header">
+        <h2>By team</h2>
+      </div>
+      <div id="teamTableWrap"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2 id="tasksTitle">Tasks</h2>
+        <div class="panel-actions tasks-filters">
+          <input class="text-input" id="taskSearch" type="search" placeholder="Search tasks…" aria-label="Search tasks" />
+          <select class="select-input" id="taskOwnerSelect" aria-label="Filter by owner">
+            <option value="">All owners</option>
+          </select>
+          <select class="select-input" id="taskStatusSelect" aria-label="Filter by status">
+            <option value="">All statuses</option>
+            <option value="overdue">Overdue</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+      </div>
+      <div id="taskListWrap"></div>
+      <p class="task-list-count" id="taskListCount"></p>
+    </section>
+
+    <footer class="page-footer" id="footer"></footer>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
