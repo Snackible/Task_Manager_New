@@ -191,8 +191,8 @@ function scopedView(data) {
 
 function renderTabs(data) {
   const bar = document.getElementById("tabBar");
-  const tabs = [{ key: "total", label: "Total", count: data.taskCount }].concat(
-    Object.entries(data.perSheet).map(([key, s]) => ({ key, label: s.name, count: s.total }))
+  const tabs = [{ key: "total", label: "Total", source: null }].concat(
+    Object.entries(data.perSheet).map(([key, s]) => ({ key, label: s.name, source: data.sources[key] }))
   );
   // Remove only the old buttons — the indicator div stays in place (same DOM
   // node) so its left/width transition has a real "from" value to animate.
@@ -203,7 +203,15 @@ function renderTabs(data) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "tab-btn" + (tab.key === currentScope ? " active" : "");
-    btn.innerHTML = `${tab.label}<span class="tab-count">${tab.count}</span>`;
+    // "Total" spans every source at once, so it gets no single dot to show —
+    // only per-team tabs have one source to report on.
+    const dot =
+      tab.source === "live"
+        ? '<span class="tab-availability-dot is-live" title="Live data"></span>'
+        : tab.source
+          ? '<span class="tab-availability-dot is-offline" title="Demo or no live data"></span>'
+          : "";
+    btn.innerHTML = `${dot}${tab.label}`;
     btn.addEventListener("click", () => {
       if (currentScope === tab.key) return;
       currentScope = tab.key;

@@ -412,13 +412,16 @@ body {
 }
 .tab-btn:hover { color: var(--text-primary); }
 .tab-btn.active { color: var(--text-primary); }
-.tab-btn .tab-count {
-  font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
-  font-weight: 500;
-  margin-left: 5px;
+.tab-availability-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
 }
-.tab-btn.active .tab-count { color: var(--text-secondary); }
+.tab-availability-dot.is-live { background: var(--status-pending); }
+.tab-availability-dot.is-offline { background: var(--status-in-progress); }
 
 .seg-toggle {
   display: flex;
