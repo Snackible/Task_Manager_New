@@ -7,6 +7,15 @@ const STATUS_COLOR = {
 };
 // Resolved (non-variable) colors, needed for SVG fill attrs in some browsers.
 const STATUS_COLOR_RESOLVED = {};
+// Gradient defs live in the hidden <svg> at the top of index.html — their
+// stops reference the CSS vars directly, so they repaint on theme change
+// with no JS involvement.
+const STATUS_GRADIENT_ID = {
+  overdue: "gradOverdue",
+  pending: "gradPending",
+  in_progress: "gradInProgress",
+  completed: "gradCompleted",
+};
 
 function resolveColors() {
   const style = getComputedStyle(document.documentElement);
@@ -97,28 +106,87 @@ function badgeHTML(source) {
   return '<span class="badge empty">No data</span>';
 }
 
-/** Resolve the currently selected scope + granularity into a {label, totals, series, taskCount, source} view. */
+let currentDateRange = "all"; // "all" | "week" | "month" | "7d" | "30d" — shared filter across stat tiles, chart, and the task table
+
+/** UTC {start, end} Date bounds for a date-range filter value, or null for "all". */
+function dateRangeBounds(range) {
+  if (range === "all" || !range) return null;
+  const now = new Date();
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  if (range === "week") {
+    const start = isoWeekStartClient(today);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 6);
+    return { start, end };
+  }
+  if (range === "month") {
+    const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+    const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0));
+    return { start, end };
+  }
+  if (range === "7d") {
+    const start = new Date(today);
+    start.setUTCDate(start.getUTCDate() - 6);
+    return { start, end: today };
+  }
+  if (range === "30d") {
+    const start = new Date(today);
+    start.setUTCDate(start.getUTCDate() - 29);
+    return { start, end: today };
+  }
+  return null;
+}
+
+function isWithinRange(isoDateStr, range) {
+  if (!range) return true;
+  if (!isoDateStr) return false;
+  const d = new Date(`${isoDateStr}T00:00:00Z`);
+  return d.getTime() >= range.start.getTime() && d.getTime() <= range.end.getTime();
+}
+
+/** Sum a weekly/daily series' per-period status counts into one totals object. */
+function sumSeriesTotals(series) {
+  const totals = { overdue: 0, pending: 0, in_progress: 0, completed: 0 };
+  for (const period of series) {
+    for (const status of STATUS_ORDER) totals[status] += period[status] || 0;
+  }
+  return totals;
+}
+
+/** Resolve the currently selected scope + granularity + date range into a
+ * {label, totals, series, taskCount, source} view. When a date range is
+ * active, totals are recomputed from the (now range-filtered) series
+ * instead of the lifetime totals — those totals are literally "how many
+ * dated tasks fall in this range, by current status," which is what a
+ * date-range filter should mean. */
 function scopedView(data) {
   const seriesKey = currentGranularity === "daily" ? "daily" : "weekly";
   const perSheetSeriesKey = currentGranularity === "daily" ? "perSheetDaily" : "perSheetWeekly";
 
+  let label, totals, series, taskCount, source;
   if (currentScope === "total") {
-    return {
-      label: "Total",
-      totals: data.totals,
-      series: data[seriesKey] || [],
-      taskCount: data.taskCount,
-      source: null,
-    };
+    label = "Total";
+    totals = data.totals;
+    series = data[seriesKey] || [];
+    taskCount = data.taskCount;
+    source = null;
+  } else {
+    const sheet = data.perSheet[currentScope];
+    label = sheet.name;
+    totals = { overdue: sheet.overdue, pending: sheet.pending, in_progress: sheet.in_progress, completed: sheet.completed };
+    series = (data[perSheetSeriesKey] && data[perSheetSeriesKey][currentScope]) || [];
+    taskCount = sheet.total;
+    source = data.sources[currentScope];
   }
-  const sheet = data.perSheet[currentScope];
-  return {
-    label: sheet.name,
-    totals: { pending: sheet.pending, in_progress: sheet.in_progress, completed: sheet.completed },
-    series: (data[perSheetSeriesKey] && data[perSheetSeriesKey][currentScope]) || [],
-    taskCount: sheet.total,
-    source: data.sources[currentScope],
-  };
+
+  const range = dateRangeBounds(currentDateRange);
+  if (range) {
+    series = series.filter((p) => isWithinRange(p.periodStart, range));
+    totals = sumSeriesTotals(series);
+    taskCount = STATUS_ORDER.reduce((sum, s) => sum + (totals[s] || 0), 0);
+  }
+
+  return { label, totals, series, taskCount, source };
 }
 
 function renderTabs(data) {
@@ -187,6 +255,11 @@ function renderScopedContent(data) {
   } else {
     teamPanel.hidden = true;
   }
+
+  // A "remind" is inherently team-scoped (one WhatsApp contact per team) —
+  // there's no single number to send an "all teams" reminder to, so the
+  // panel only makes sense once a specific team is selected.
+  document.getElementById("reminderPanel").hidden = currentScope === "total";
 
   document.getElementById("tasksTitle").textContent =
     currentScope === "total" ? "Tasks" : `Tasks — ${view.label}`;
@@ -650,7 +723,7 @@ function renderSeriesChart(series) {
         y: y,
         width: barW,
         height: Math.max(0, segH - (isTop ? 0 : gap / 2) - rectGap),
-        fill: STATUS_COLOR_RESOLVED[status],
+        fill: `url(#${STATUS_GRADIENT_ID[status]})`,
         rx: isTop ? 4 : 0,
         class: "bar-seg",
       });
@@ -815,18 +888,36 @@ let taskListData = [];
 let taskSearchText = "";
 let taskOwnerFilter = "";
 let taskStatusFilter = "";
+let taskListLoading = false;
 const TASK_LIST_DISPLAY_CAP = 150;
 
+// Guards against out-of-order responses: switching tabs quickly fires a new
+// loadTaskList() before the previous one's fetch has resolved, and network
+// timing doesn't guarantee responses arrive in request order. Without this,
+// a slow-but-stale response can land last and silently overwrite the
+// current (correct) scope's data with the wrong — or empty, on a failed
+// fetch — one. Each call gets a sequence number; a response is only
+// applied if it's still the most recent request by the time it resolves.
+let taskListRequestSeq = 0;
+
 async function loadTaskList(scope) {
+  const requestId = ++taskListRequestSeq;
+  taskListLoading = true;
+  renderTaskListTable();
+  let data;
   try {
     const res = await fetch(`/api/tasklist?scope=${encodeURIComponent(scope)}`);
     if (!res.ok) throw new Error(`API error ${res.status}`);
     const json = await res.json();
-    taskListData = json.tasks;
+    data = json.tasks;
   } catch (err) {
+    if (requestId !== taskListRequestSeq) return; // superseded — don't clobber newer (possibly successful) data with this failure
     console.error("Failed to load task list:", err);
-    taskListData = [];
+    data = [];
   }
+  if (requestId !== taskListRequestSeq) return; // a newer request already landed; this one is stale
+  taskListData = data;
+  taskListLoading = false;
   populateOwnerSelect();
   renderTaskListTable();
 }
@@ -845,10 +936,15 @@ function populateOwnerSelect() {
 
 function filteredTaskList() {
   const q = taskSearchText.trim().toLowerCase();
+  const range = dateRangeBounds(currentDateRange);
   return taskListData.filter((t) => {
     if (taskStatusFilter && t.status !== taskStatusFilter) return false;
     if (taskOwnerFilter && t.assignedTo !== taskOwnerFilter) return false;
     if (q && !t.task.toLowerCase().includes(q)) return false;
+    // Filtering by deadline specifically (the only per-task date exposed to
+    // the client) — tasks with no deadline are excluded once a range is
+    // active, same as "undated" tasks drop out of the chart/stat-tile view.
+    if (range && !isWithinRange(t.deadline, range)) return false;
     return true;
   });
 }
@@ -856,6 +952,13 @@ function filteredTaskList() {
 function renderTaskListTable() {
   const wrap = document.getElementById("taskListWrap");
   const countEl = document.getElementById("taskListCount");
+
+  if (taskListLoading) {
+    wrap.innerHTML = `<p class="empty-note loading-note"><span class="loading-spinner" aria-hidden="true"></span> Loading tasks…</p>`;
+    countEl.textContent = "";
+    return;
+  }
+
   const filtered = filteredTaskList();
   const showTeamColumn = currentScope === "total";
 
@@ -870,23 +973,32 @@ function renderTaskListTable() {
     return;
   }
 
+  const colCount = showTeamColumn ? 5 : 4;
   const shown = filtered.slice(0, TASK_LIST_DISPLAY_CAP);
   const rows = shown
-    .map((t) => {
+    .map((t, i) => {
       const teamCell = showTeamColumn ? `<td>${t.teamName}</td>` : "";
+      const hasNotes = !!t.notes;
+      // Click-to-expand notes: deliberately not persisted across re-renders
+      // (search/filter/scope changes all rebuild this table from scratch) —
+      // expansion resetting when the underlying list changes is the
+      // expected behavior, not a bug, so no state tracking needed here.
+      const noteRow = hasNotes
+        ? `<tr class="task-note-row" data-note-index="${i}" hidden><td colspan="${colCount}"><span class="task-note-label">Notes:</span> ${escapeHTML(t.notes)}</td></tr>`
+        : "";
       return `
-      <tr>
-        <td>${escapeHTML(t.task)}</td>
+      <tr class="${hasNotes ? "has-notes" : ""}" data-note-index="${i}" ${hasNotes ? 'role="button" tabindex="0" aria-expanded="false"' : ""}>
+        <td>${escapeHTML(t.task)}${hasNotes ? '<span class="note-indicator" title="Has notes — click to view">Notes</span>' : ""}</td>
         ${teamCell}
         <td>${t.assignedTo ? escapeHTML(t.assignedTo) : '<span class="text-muted-cell">—</span>'}</td>
         <td><span class="badge ${t.status}">${currentData.statusLabels[t.status]}</span></td>
         <td>${t.deadline || '<span class="text-muted-cell">—</span>'}</td>
-      </tr>`;
+      </tr>${noteRow}`;
     })
     .join("");
 
   wrap.innerHTML = `
-    <table class="data-table">
+    <table class="data-table task-list-table">
       <thead>
         <tr>
           <th>Task</th>
@@ -898,6 +1010,23 @@ function renderTaskListTable() {
       </thead>
       <tbody>${rows}</tbody>
     </table>`;
+
+  const toggleNote = (tr) => {
+    const idx = tr.dataset.noteIndex;
+    const noteRow = wrap.querySelector(`tr.task-note-row[data-note-index="${CSS.escape(idx)}"]`);
+    if (!noteRow) return;
+    noteRow.hidden = !noteRow.hidden;
+    tr.setAttribute("aria-expanded", String(!noteRow.hidden));
+  };
+  wrap.querySelectorAll("tr.has-notes").forEach((tr) => {
+    tr.addEventListener("click", () => toggleNote(tr));
+    tr.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleNote(tr);
+      }
+    });
+  });
 
   const countBits = [`${filtered.length} of ${taskListData.length} tasks`];
   if (filtered.length > TASK_LIST_DISPLAY_CAP) countBits.push(`showing first ${TASK_LIST_DISPLAY_CAP}`);
@@ -964,6 +1093,13 @@ document.querySelectorAll("#granularityToggle .seg-btn").forEach((btn) => {
   });
 });
 
+document.getElementById("dateRangeSelect").addEventListener("change", (e) => {
+  currentDateRange = e.target.value;
+  if (!currentData) return;
+  renderScopedContent(currentData); // stat tiles + chart
+  renderTaskListTable(); // tasks table — same shared filter, no refetch needed
+});
+
 document.querySelectorAll("#reportModeToggle .seg-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     const m = btn.dataset.mode;
@@ -974,6 +1110,89 @@ document.querySelectorAll("#reportModeToggle .seg-btn").forEach((btn) => {
     const scopeLabel = currentScope === "total" ? "Total" : currentData.perSheet[currentScope].name;
     resetReportPanel(scopeLabel);
   });
+});
+
+// ---- Reminders (WhatsApp deep-link — https://wa.me/<number>?text=<message>,
+// opens WhatsApp with the message pre-filled; the person still hits Send
+// themselves inside WhatsApp. No account, no API key, no backend. ) ----
+const REMINDER_META = {
+  eod: {
+    heading: "Send EOD Update Reminder",
+    message: (scopeName) =>
+      `Reminder: please update today's EOD status for *${scopeName}* in the Task Tracker — log what got done today and update task notes.`,
+  },
+  plan: {
+    heading: "Send Weekly Plan Reminder",
+    message: (scopeName) =>
+      `Reminder: please log this week's plan for *${scopeName}* in the Task Tracker — what's WIP, what hasn't started, and this week's priorities.`,
+  },
+  weekcheck: {
+    heading: "Send Week Cross-check Reminder",
+    message: (scopeName) =>
+      `Reminder: please cross-check the status and notes of all *${scopeName}* tasks in the Task Tracker for the whole week before it closes out.`,
+  },
+};
+const REMINDER_NUMBERS_KEY = "taskTrackerReminderNumbers";
+
+function loadReminderNumbers() {
+  try {
+    return JSON.parse(localStorage.getItem(REMINDER_NUMBERS_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+function saveReminderNumbers(n1) {
+  try {
+    localStorage.setItem(REMINDER_NUMBERS_KEY, JSON.stringify({ n1 }));
+  } catch {
+    // localStorage unavailable (e.g. private browsing) — not worth failing over
+  }
+}
+function waLink(number, text) {
+  const digits = number.replace(/\D/g, ""); // wa.me wants digits only: no +, spaces, dashes, or parens
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+}
+
+function openReminderModal(type) {
+  const meta = REMINDER_META[type];
+  if (!meta || !currentData) return;
+  const scopeName =
+    currentScope === "total" ? "all teams" : (currentData.perSheet[currentScope] || {}).name || currentScope;
+  document.getElementById("reminderModalHeading").textContent = meta.heading;
+  document.getElementById("reminderMessage").value = meta.message(scopeName);
+  const saved = loadReminderNumbers();
+  document.getElementById("reminderNumber1").value = saved.n1 || "";
+  document.getElementById("reminderModalOverlay").hidden = false;
+}
+function closeReminderModal() {
+  document.getElementById("reminderModalOverlay").hidden = true;
+}
+
+document.querySelectorAll(".btn-reminder").forEach((btn) => {
+  btn.addEventListener("click", () => openReminderModal(btn.dataset.reminder));
+});
+document.getElementById("reminderCancelBtn").addEventListener("click", closeReminderModal);
+document.getElementById("reminderModalOverlay").addEventListener("click", (e) => {
+  if (e.target.id === "reminderModalOverlay") closeReminderModal();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !document.getElementById("reminderModalOverlay").hidden) closeReminderModal();
+});
+// Persist on every edit (not just on Send) — a number typed in and then
+// cancelled out of should still be there next time the modal opens.
+function persistReminderNumberFields() {
+  saveReminderNumbers(document.getElementById("reminderNumber1").value.trim());
+}
+document.getElementById("reminderNumber1").addEventListener("input", persistReminderNumberFields);
+document.getElementById("reminderSendBtn").addEventListener("click", () => {
+  const n1 = document.getElementById("reminderNumber1").value.trim();
+  const message = document.getElementById("reminderMessage").value;
+  if (!n1) {
+    alert("Enter a phone number.");
+    return;
+  }
+  window.open(waLink(n1, message), "_blank");
+  closeReminderModal();
 });
 
 // ---- Task list filters ----
@@ -994,11 +1213,13 @@ document.getElementById("taskStatusSelect").addEventListener("change", (e) => {
 let liveEnabled = true;
 let livePollId = null;
 
+const LIVE_POLL_MS = 10 * 60 * 1000; // was 5 min, then 30s before that — each drop was to ease load on the Apps Script sources, which rate-limit under concurrent/frequent requests and intermittently return empty data when tripped
+
 function startLivePolling() {
   if (livePollId) return;
   livePollId = setInterval(() => {
     loadData().then(silentRefresh).catch((err) => console.error("Auto-refresh failed:", err));
-  }, 30000);
+  }, LIVE_POLL_MS);
 }
 function stopLivePolling() {
   clearInterval(livePollId);
@@ -1010,7 +1231,7 @@ document.getElementById("liveToggle").addEventListener("click", () => {
   const toggle = document.getElementById("liveToggle");
   toggle.classList.toggle("active", liveEnabled);
   document.getElementById("liveLabel").textContent = liveEnabled ? "Live" : "Paused";
-  toggle.title = liveEnabled ? "Auto-refreshes every 30s — click to pause" : "Auto-refresh paused — click to resume";
+  toggle.title = liveEnabled ? "Auto-refreshes every 10 min — click to pause" : "Auto-refresh paused — click to resume";
   if (liveEnabled) startLivePolling();
   else stopLivePolling();
 });
@@ -1022,8 +1243,19 @@ window.addEventListener("resize", () => {
   if (activeBtn) moveTabIndicator(activeBtn);
 });
 
+function hideLoadingOverlay() {
+  const el = document.getElementById("loadingOverlay");
+  if (!el) return;
+  el.classList.add("loading-overlay-hidden");
+  setTimeout(() => { el.hidden = true; }, 300);
+}
+
 loadData()
-  .then(render)
+  .then((data) => {
+    render(data);
+    hideLoadingOverlay();
+  })
   .catch((err) => {
     document.getElementById("app").innerHTML = `<p style="padding:40px;color:#e34948">Failed to load dashboard: ${err.message}</p>`;
+    hideLoadingOverlay();
   });

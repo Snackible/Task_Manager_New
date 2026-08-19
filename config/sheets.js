@@ -24,37 +24,51 @@ export const SHEETS = [
     name: "FO",
     sheetId: "17GmwobGGZOUUUL1v9SNW4sW7VDHh5hthy_lTCx47eCI",
     tab: "Sheet1",
-    csvUrl: "",
-    appScriptUrl: "https://script.google.com/macros/s/AKfycbxH6z_T3VN6ATixw-BVZizmf2TO99Dm4xtUHud35vAL65PHaly89kQoMsQTx9N2ZZ_e/exec",
+    // Switched from appScriptUrl to csvUrl, same reasoning as GTMT below:
+    // the sheet is now shared link-viewable, and CSV export is a plain
+    // fetch with none of the Apps Script web app's intermittent-404
+    // reliability problems.
+    csvUrl: "https://docs.google.com/spreadsheets/d/17GmwobGGZOUUUL1v9SNW4sW7VDHh5hthy_lTCx47eCI/export?format=csv&gid=0",
+    appScriptUrl: "",
   },
   {
     key: "rnd",
     name: "R&D",
     sheetId: "1bzwBuac8CE_lhM03qeMR_9Lxog9zsrsGNKZoRtarZVs",
     tab: "Sheet1",
-    csvUrl: "",
-    appScriptUrl: "https://script.google.com/macros/s/AKfycbyupmgoz1daCfwbqmtbl_YAcq0coqtdvUGF5cnGTRUMURKan0l8dGUW8Fcx_1pT7jpx0Q/exec",
+    // Switched from appScriptUrl to csvUrl — this was the team hit hardest
+    // by the Apps Script flakiness (repeatedly showed no data). Now shared
+    // link-viewable, so CSV export works directly.
+    csvUrl: "https://docs.google.com/spreadsheets/d/1bzwBuac8CE_lhM03qeMR_9Lxog9zsrsGNKZoRtarZVs/export?format=csv&gid=0",
+    appScriptUrl: "",
   },
   {
     key: "b2b",
     name: "B2B",
     sheetId: "1fSUA6m6z36YAyKlGk1zhAP7SeJ7arPa9n2d0xR3CQxE",
     tab: "Sheet1",
-    csvUrl: "",
-    // Deployed, but currently returns HTTP 403 (confirmed with both curl and
-    // Node's own fetch) — unlike the other 3, which work fine. Almost
-    // certainly the deployment's "Who has access" is set to something other
-    // than "Anyone" (see README Option C, step 3). Falls back to demo/empty
-    // until that's fixed.
-    appScriptUrl: "https://script.google.com/macros/s/AKfycbyhe4ZZ-mAsHhxrDQXFSNWPaxtqgyOOgXDf7dTpYlpgeCD-quouZH7TbTgS7J9yjJnw/exec",
+    // Switched from appScriptUrl to csvUrl — the old deployment was
+    // confirmed returning HTTP 403. Now shared link-viewable, so CSV
+    // export works directly.
+    csvUrl: "https://docs.google.com/spreadsheets/d/1fSUA6m6z36YAyKlGk1zhAP7SeJ7arPa9n2d0xR3CQxE/export?format=csv&gid=0",
+    appScriptUrl: "",
   },
   {
     key: "gtmt",
     name: "GTMT",
     sheetId: "170-11PweRDbMEPXUpVx_uJxTX5h1KO4LAT2BON6fQr8",
     tab: "Sheet1",
-    csvUrl: "",
-    appScriptUrl: "https://script.google.com/macros/s/AKfycbyXsZZB2e0WmiY1_bUl65FsZswHzCXZaQibu0r-BehDt6bioa2OFjaftxFe_ILh-0Nc/exec",
+    // Switched from appScriptUrl to csvUrl: the Apps Script deployment kept
+    // 404ing intermittently even after being confirmed correct and set to
+    // "Anyone" access (its own execution log showed successful runs when
+    // invoked directly, but our fetches still failed at Google's routing
+    // layer before execution — a reliability issue with the web app itself,
+    // not something fixable from our side). The sheet is already viewable
+    // without auth, so its CSV export just works — confirmed with a plain
+    // curl returning real rows, no login redirect. Note: this URL must be
+    // the `/export?format=csv&gid=...` form, not a browser "edit" link.
+    csvUrl: "https://docs.google.com/spreadsheets/d/170-11PweRDbMEPXUpVx_uJxTX5h1KO4LAT2BON6fQr8/export?format=csv&gid=0",
+    appScriptUrl: "",
   },
   {
     key: "marketing",
