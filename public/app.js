@@ -981,7 +981,7 @@ function renderTaskListTable() {
     return;
   }
 
-  const colCount = showTeamColumn ? 5 : 4;
+  const colCount = showTeamColumn ? 6 : 5;
   const shown = filtered.slice(0, TASK_LIST_DISPLAY_CAP);
   const rows = shown
     .map((t, i) => {
@@ -1000,6 +1000,7 @@ function renderTaskListTable() {
         ${teamCell}
         <td>${t.assignedTo ? escapeHTML(t.assignedTo) : '<span class="text-muted-cell">—</span>'}</td>
         <td><span class="badge ${t.status}">${currentData.statusLabels[t.status]}</span></td>
+        <td>${t.dateReceived || '<span class="text-muted-cell">—</span>'}</td>
         <td>${t.deadline || '<span class="text-muted-cell">—</span>'}</td>
       </tr>${noteRow}`;
     })
@@ -1013,6 +1014,7 @@ function renderTaskListTable() {
           ${showTeamColumn ? "<th>Team</th>" : ""}
           <th>Assigned To</th>
           <th>Status</th>
+          <th>Date Received</th>
           <th>Deadline</th>
         </tr>
       </thead>
