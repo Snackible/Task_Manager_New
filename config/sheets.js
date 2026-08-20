@@ -98,7 +98,15 @@ export const SHEETS = [
     name: "Finance",
     sheetId: "1Eba1mtyjN0eF657EtkxHCuZZfDSn-ng0XYr2cbfX63o",
     tab: "",
-    csvUrl: "https://docs.google.com/spreadsheets/d/1Eba1mtyjN0eF657EtkxHCuZZfDSn-ng0XYr2cbfX63o/export?format=csv&gid=684750154",
+    // Two tabs merged into one team: the main tracker (gid 684750154) plus
+    // a separate "Weekly" tab (gid 0) that was previously invisible to the
+    // app entirely. Different column layout (Concerned/Remarks instead of
+    // Assigned to/Notes), but the field-getter aliases in lib/fieldGetter.js
+    // already cover both names, so no code changes were needed for that.
+    csvUrl: [
+      "https://docs.google.com/spreadsheets/d/1Eba1mtyjN0eF657EtkxHCuZZfDSn-ng0XYr2cbfX63o/export?format=csv&gid=684750154",
+      "https://docs.google.com/spreadsheets/d/1Eba1mtyjN0eF657EtkxHCuZZfDSn-ng0XYr2cbfX63o/export?format=csv&gid=0",
+    ],
     appScriptUrl: "",
   },
 ];
