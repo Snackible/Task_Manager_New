@@ -17,6 +17,12 @@
 // Every sheet is expected to have this header row (case-insensitive, order
 // doesn't matter):
 //   Task | Assigned By | Assigned to | Priority Level | Date Received | Deadline | Date Closed | Status | Notes
+//
+// `csvUrl` can also be a function (resolved fresh on every fetch, e.g.
+// monthlyTabCsvUrl) for a team whose tab changes over time instead of a
+// fixed string/array — see the Marketing entry below.
+
+import { monthlyTabCsvUrl } from "../lib/sheetsClient.js";
 
 export const SHEETS = [
   {
@@ -75,10 +81,14 @@ export const SHEETS = [
     name: "Marketing",
     sheetId: "1eexWpJLoZgYIxgro5I1FCE5o1TN2_m3_he3HcXWopDM",
     tab: "",
-    // csvUrl targets the exact gid you shared — the sheet is link-viewable so
-    // this works without credentials. Header here is "Tasks" (plural), handled
-    // in lib/aggregate.js.
-    csvUrl: "https://docs.google.com/spreadsheets/d/1eexWpJLoZgYIxgro5I1FCE5o1TN2_m3_he3HcXWopDM/export?format=csv&gid=936322201",
+    // Marketing creates a new tab every month ("August 26", "July 26", ...)
+    // instead of reusing one gid, so a hardcoded gid URL goes stale as soon
+    // as the month rolls over. csvUrl is a function here — resolved fresh on
+    // every fetch via monthlyTabCsvUrl, which computes "{Month} {YY}" from
+    // today's date and addresses that tab by name instead of gid. Self-
+    // updating every month; no manual config change needed going forward.
+    // Header here is "Tasks" (plural), handled in lib/aggregate.js.
+    csvUrl: () => monthlyTabCsvUrl("1eexWpJLoZgYIxgro5I1FCE5o1TN2_m3_he3HcXWopDM"),
     appScriptUrl: "",
   },
   {
