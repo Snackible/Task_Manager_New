@@ -468,7 +468,16 @@ body {
   border-radius: 18px;
   padding: 20px 22px;
   box-shadow: var(--shadow), 0 16px 32px -22px var(--tile-accent, transparent);
-  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.2s var(--ease);
+  cursor: pointer;
+}
+.stat-tile:focus-visible {
+  outline: 2px solid var(--tile-accent, var(--status-pending));
+  outline-offset: 2px;
+}
+.stat-tile.active-filter {
+  border-color: var(--tile-accent, var(--border));
+  box-shadow: var(--shadow-hover), 0 0 0 1px var(--tile-accent, transparent), 0 20px 40px -18px var(--tile-accent, transparent);
 }
 .stat-tile::before {
   content: "";

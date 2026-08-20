@@ -577,9 +577,14 @@ function renderStatTiles(view) {
   for (const status of STATUS_ORDER) {
     const total = view.totals[status] || 0;
     const label = currentData.statusLabels[status];
+    const isActive = taskStatusFilter === status;
     const tile = document.createElement("div");
-    tile.className = "stat-tile";
+    tile.className = "stat-tile" + (isActive ? " active-filter" : "");
     tile.style.setProperty("--tile-accent", STATUS_COLOR[status]);
+    tile.setAttribute("role", "button");
+    tile.tabIndex = 0;
+    tile.setAttribute("aria-pressed", String(isActive));
+    tile.title = isActive ? `Click to clear the ${label} filter` : `Click to filter tasks by ${label}`;
     tile.innerHTML = `
       <div class="label"><span class="swatch" style="background:${STATUS_COLOR[status]}"></span>${label}</div>
       <div class="value-row">
@@ -588,8 +593,27 @@ function renderStatTiles(view) {
       </div>
       <div class="sub">${deltaSub(view, status)}</div>
     `;
+    tile.addEventListener("click", () => toggleStatTileFilter(status));
+    tile.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleStatTileFilter(status);
+      }
+    });
     row.appendChild(tile);
   }
+}
+
+// Clicking a stat tile is a shortcut for the status dropdown below — same
+// filter state, just reachable from the summary numbers too. Clicking the
+// already-active tile clears the filter instead of doing nothing.
+function toggleStatTileFilter(status) {
+  taskStatusFilter = taskStatusFilter === status ? "" : status;
+  const select = document.getElementById("taskStatusSelect");
+  if (select) select.value = taskStatusFilter;
+  renderStatTiles(scopedView(currentData));
+  renderTaskListTable();
+  document.getElementById("tasksTitle").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function deltaSub(view, status) {
@@ -945,7 +969,7 @@ function populateOwnerSelect() {
 function filteredTaskList() {
   const q = taskSearchText.trim().toLowerCase();
   const range = dateRangeBounds(currentDateRange);
-  return taskListData.filter((t) => {
+  const filtered = taskListData.filter((t) => {
     if (taskStatusFilter && t.status !== taskStatusFilter) return false;
     if (taskOwnerFilter && t.assignedTo !== taskOwnerFilter) return false;
     if (q && !t.task.toLowerCase().includes(q)) return false;
@@ -954,6 +978,15 @@ function filteredTaskList() {
     // active, same as "undated" tasks drop out of the chart/stat-tile view.
     if (range && !isWithinRange(t.deadline, range)) return false;
     return true;
+  });
+  // Newest received first — ISO date strings sort correctly with plain
+  // string comparison. Tasks with no Date Received sink to the end rather
+  // than interleaving arbitrarily among dated ones.
+  return filtered.sort((a, b) => {
+    if (!a.dateReceived && !b.dateReceived) return 0;
+    if (!a.dateReceived) return 1;
+    if (!b.dateReceived) return -1;
+    return b.dateReceived.localeCompare(a.dateReceived);
   });
 }
 
