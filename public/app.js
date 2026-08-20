@@ -699,9 +699,13 @@ function renderSeriesChart(series) {
   const plotW = width - marginLeft - marginRight;
   const plotH = height - marginTop - marginBottom;
 
+  // Must match every status actually drawn below (STATUS_ORDER includes
+  // "overdue") — leaving it out here previously undercounted the true
+  // stacked height whenever overdue was non-trivial, pushing bar segments
+  // above the plot area (negative y) since the SVG allows overflow.
   const maxTotal = Math.max(
     1,
-    ...series.map((p) => p.pending + p.in_progress + p.completed)
+    ...series.map((p) => STATUS_ORDER.reduce((sum, s) => sum + (p[s] || 0), 0))
   );
   const niceMax = niceCeil(maxTotal);
 
@@ -740,7 +744,7 @@ function renderSeriesChart(series) {
   series.forEach((period, i) => {
     const cx = marginLeft + bandW * i + bandW / 2;
     let yCursor = marginTop + plotH; // bottom, we stack upward
-    const total = period.pending + period.in_progress + period.completed;
+    const total = STATUS_ORDER.reduce((sum, s) => sum + (period[s] || 0), 0);
 
     STATUS_ORDER.forEach((status, si) => {
       const val = period[status] || 0;
