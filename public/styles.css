@@ -719,6 +719,31 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   margin-right: 4px;
 }
 
+.owner-badge {
+  display: inline-flex;
+  align-items: center;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  margin: 2px 4px 2px 0;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+.owner-badge:hover {
+  border-color: var(--status-pending);
+  color: var(--status-pending);
+}
+.owner-badge.active {
+  color: var(--status-pending);
+  border-color: var(--status-pending);
+  background: color-mix(in srgb, var(--status-pending) 14%, var(--surface-2));
+  font-weight: 700;
+}
+
 .badge {
   display: inline-block;
   font-size: 11px;

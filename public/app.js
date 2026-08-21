@@ -106,7 +106,7 @@ function badgeHTML(source) {
   return '<span class="badge empty">No data</span>';
 }
 
-let currentDateRange = "all"; // "all" | "week" | "month" | "7d" | "30d" — shared filter across stat tiles, chart, and the task table
+let currentDateRange = "week"; // "all" | "week" | "month" | "7d" | "30d" — shared filter across stat tiles, chart, and the task table
 
 /** UTC {start, end} Date bounds for a date-range filter value, or null for "all". */
 function dateRangeBounds(range) {
@@ -268,6 +268,12 @@ function renderScopedContent(data) {
   // there's no single number to send an "all teams" reminder to, so the
   // panel only makes sense once a specific team is selected.
   document.getElementById("reminderPanel").hidden = currentScope === "total";
+
+  // Same reasoning as Reminders: a flat list of every team's tasks at once
+  // isn't a useful read (550+ rows), and the "By team" table above already
+  // covers the Total view's purpose. Individual-task browsing only makes
+  // sense once a specific team is selected.
+  document.getElementById("tasksPanel").hidden = currentScope === "total";
 
   document.getElementById("tasksTitle").textContent =
     currentScope === "total" ? "Tasks" : `Tasks — ${view.label}`;
@@ -922,7 +928,11 @@ function renderTeamTable(data) {
 // ---- Task list (search + owner + status filter) ----
 let taskListData = [];
 let taskSearchText = "";
-let taskOwnerFilter = "";
+// A set, not a single string — an assignee cell often lists several people
+// ("Aditi, Chinmay"), and clicking more than one name badge should stack
+// (show tasks matching ANY selected name), not replace one selection with
+// another.
+let taskOwnerFilters = new Set();
 let taskStatusFilter = "";
 let taskListLoading = false;
 const TASK_LIST_DISPLAY_CAP = 150;
@@ -937,6 +947,10 @@ const TASK_LIST_DISPLAY_CAP = 150;
 let taskListRequestSeq = 0;
 
 async function loadTaskList(scope) {
+  // The Tasks panel is hidden entirely on Total (see renderScopedContent) —
+  // no point fetching every team's full task list (550+ rows) just to not
+  // show it.
+  if (scope === "total") return;
   const requestId = ++taskListRequestSeq;
   taskListLoading = true;
   renderTaskListTable();
@@ -958,16 +972,47 @@ async function loadTaskList(scope) {
   renderTaskListTable();
 }
 
+// Individual names, not raw assignee-cell strings — "Krishna, Manya, Purthi"
+// should offer Krishna/Manya/Purthi as three separate choices, matching how
+// the badge filters below work on individual names too.
+function allOwnerNames() {
+  const names = new Set();
+  for (const t of taskListData) {
+    if (!t.assignedTo) continue;
+    for (const name of t.assignedTo.split(",")) {
+      const trimmed = name.trim();
+      if (trimmed) names.add(trimmed);
+    }
+  }
+  return Array.from(names).sort((a, b) => a.localeCompare(b));
+}
+
+// Each name in an assignee cell ("Aditi, Chinmay") gets its own clickable
+// badge — a <button> so it's keyboard-focusable/clickable for free, unlike
+// a plain span. `stopPropagation` on the click listener (wired up after
+// render, alongside the note-toggle listeners) keeps this from also
+// triggering the row's own click-to-expand-notes handler.
+function ownerBadgesHTML(assignedTo) {
+  if (!assignedTo) return '<span class="text-muted-cell">—</span>';
+  const names = assignedTo
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
+  return names
+    .map((name) => {
+      const active = taskOwnerFilters.has(name);
+      return `<button type="button" class="owner-badge${active ? " active" : ""}" data-owner-name="${escapeHTML(name)}">${escapeHTML(name)}</button>`;
+    })
+    .join("");
+}
+
 function populateOwnerSelect() {
   const select = document.getElementById("taskOwnerSelect");
-  const owners = Array.from(new Set(taskListData.map((t) => t.assignedTo).filter(Boolean))).sort((a, b) =>
-    a.localeCompare(b)
-  );
+  const owners = allOwnerNames();
   const prevValue = select.value;
   select.innerHTML =
     `<option value="">All owners</option>` + owners.map((o) => `<option value="${o}">${o}</option>`).join("");
   select.value = owners.includes(prevValue) ? prevValue : "";
-  if (select.value !== prevValue) taskOwnerFilter = select.value;
 }
 
 function filteredTaskList() {
@@ -975,7 +1020,10 @@ function filteredTaskList() {
   const range = dateRangeBounds(currentDateRange);
   const filtered = taskListData.filter((t) => {
     if (taskStatusFilter && t.status !== taskStatusFilter) return false;
-    if (taskOwnerFilter && t.assignedTo !== taskOwnerFilter) return false;
+    if (taskOwnerFilters.size > 0) {
+      const names = t.assignedTo ? t.assignedTo.split(",").map((n) => n.trim()) : [];
+      if (!names.some((n) => taskOwnerFilters.has(n))) return false;
+    }
     if (q && !t.task.toLowerCase().includes(q)) return false;
     // Filtering by deadline specifically (the only per-task date exposed to
     // the client) — tasks with no deadline are excluded once a range is
@@ -1035,7 +1083,7 @@ function renderTaskListTable() {
       <tr class="${hasNotes ? "has-notes" : ""}" data-note-index="${i}" ${hasNotes ? 'role="button" tabindex="0" aria-expanded="false"' : ""}>
         <td>${escapeHTML(t.task)}${hasNotes ? '<span class="note-indicator" title="Has notes — click to view">Notes</span>' : ""}</td>
         ${teamCell}
-        <td>${t.assignedTo ? escapeHTML(t.assignedTo) : '<span class="text-muted-cell">—</span>'}</td>
+        <td>${ownerBadgesHTML(t.assignedTo)}</td>
         <td><span class="badge ${t.status}">${currentData.statusLabels[t.status]}</span></td>
         <td>${t.dateReceived || '<span class="text-muted-cell">—</span>'}</td>
         <td>${t.deadline || '<span class="text-muted-cell">—</span>'}</td>
@@ -1057,6 +1105,13 @@ function renderTaskListTable() {
       </thead>
       <tbody>${rows}</tbody>
     </table>`;
+
+  wrap.querySelectorAll(".owner-badge").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleOwnerFilter(btn.dataset.ownerName);
+    });
+  });
 
   const toggleNote = (tr) => {
     const idx = tr.dataset.noteIndex;
@@ -1248,9 +1303,26 @@ document.getElementById("taskSearch").addEventListener("input", (e) => {
   renderTaskListTable();
 });
 document.getElementById("taskOwnerSelect").addEventListener("change", (e) => {
-  taskOwnerFilter = e.target.value;
+  // The dropdown is a single-pick shortcut — choosing a name here replaces
+  // whatever badge selections were active, rather than adding to them.
+  taskOwnerFilters = e.target.value ? new Set([e.target.value]) : new Set();
   renderTaskListTable();
 });
+// Toggle one name in/out of the active owner filter set — used by the
+// clickable name badges in the Assigned To column. Exported to module scope
+// (not just used inline) so renderTaskListTable's badges can call it.
+function toggleOwnerFilter(name) {
+  if (taskOwnerFilters.has(name)) taskOwnerFilters.delete(name);
+  else taskOwnerFilters.add(name);
+  // Keep the dropdown in sync when it can represent the current state (one
+  // name, or none) — a multi-name selection has no single dropdown value,
+  // so it just falls back to "All owners" without losing the real filter.
+  const select = document.getElementById("taskOwnerSelect");
+  if (select) {
+    select.value = taskOwnerFilters.size === 1 ? [...taskOwnerFilters][0] : "";
+  }
+  renderTaskListTable();
+}
 document.getElementById("taskStatusSelect").addEventListener("change", (e) => {
   taskStatusFilter = e.target.value;
   renderTaskListTable();
