@@ -744,6 +744,11 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   font-weight: 700;
 }
 
+.sub-tab-row {
+  display: inline-flex;
+  margin: 4px 0 14px;
+}
+
 .owner-filter-chips {
   display: flex;
   flex-wrap: wrap;

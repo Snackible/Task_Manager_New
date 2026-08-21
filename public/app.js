@@ -954,6 +954,11 @@ let taskSearchText = "";
 // another.
 let taskOwnerFilters = new Set();
 let taskStatusFilter = "";
+// Which sheet tab to show, for a team whose tasks span more than one (e.g.
+// Finance's "Daily" and "Weekly" tabs) — "" means show every sub-tab
+// together. Reset whenever loadTaskList() runs, since sub-tabs are specific
+// to whichever team is currently in view.
+let currentSubTab = "";
 let taskListLoading = false;
 const TASK_LIST_DISPLAY_CAP = 150;
 
@@ -971,6 +976,7 @@ async function loadTaskList(scope) {
   // no point fetching every team's full task list (550+ rows) just to not
   // show it.
   if (scope === "total") return;
+  currentSubTab = "";
   const requestId = ++taskListRequestSeq;
   taskListLoading = true;
   renderTaskListTable();
@@ -989,7 +995,38 @@ async function loadTaskList(scope) {
   taskListData = data;
   taskListLoading = false;
   populateOwnerSelect();
+  renderSubTabRow();
   renderTaskListTable();
+}
+
+// Only shown when the loaded team's tasks actually span more than one
+// tagged sheet tab (see config/sheets.js's csvUrl `{url, subTab}` form) —
+// most teams have none, so this stays hidden for them.
+function renderSubTabRow() {
+  const row = document.getElementById("subTabRow");
+  if (!row) return;
+  const subTabs = Array.from(new Set(taskListData.map((t) => t.subTab).filter(Boolean)));
+  if (subTabs.length < 2) {
+    row.hidden = true;
+    row.innerHTML = "";
+    return;
+  }
+  row.hidden = false;
+  row.className = "sub-tab-row seg-toggle";
+  const tabs = [{ key: "", label: "All" }, ...subTabs.map((s) => ({ key: s, label: s }))];
+  row.innerHTML = tabs
+    .map(
+      (t) =>
+        `<button type="button" class="seg-btn${currentSubTab === t.key ? " active" : ""}" data-sub-tab="${escapeHTML(t.key)}">${escapeHTML(t.label)}</button>`
+    )
+    .join("");
+  row.querySelectorAll(".seg-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      currentSubTab = btn.dataset.subTab;
+      renderSubTabRow();
+      renderTaskListTable();
+    });
+  });
 }
 
 // Individual names, not raw assignee-cell strings — "Krishna, Manya, Purthi"
@@ -1039,6 +1076,7 @@ function filteredTaskList() {
   const q = taskSearchText.trim().toLowerCase();
   const range = dateRangeBounds(currentDateRange);
   const filtered = taskListData.filter((t) => {
+    if (currentSubTab && t.subTab !== currentSubTab) return false;
     if (taskStatusFilter && t.status !== taskStatusFilter) return false;
     if (taskOwnerFilters.size > 0) {
       const names = t.assignedTo ? t.assignedTo.split(",").map((n) => n.trim()) : [];

@@ -108,14 +108,17 @@ export const SHEETS = [
     name: "Finance",
     sheetId: "1Eba1mtyjN0eF657EtkxHCuZZfDSn-ng0XYr2cbfX63o",
     tab: "",
-    // Two tabs merged into one team: the main tracker (gid 684750154) plus
-    // a separate "Weekly" tab (gid 0) that was previously invisible to the
+    // Two tabs merged into one team: "Daily" (gid 684750154) plus a
+    // separate "Weekly" tab (gid 0) that was previously invisible to the
     // app entirely. Different column layout (Concerned/Remarks instead of
-    // Assigned to/Notes), but the field-getter aliases in lib/fieldGetter.js
-    // already cover both names, so no code changes were needed for that.
+    // Assigned to/Notes, and Daily's date column is just "Date" rather than
+    // Date Received/Deadline), but the field-getter aliases in
+    // lib/fieldGetter.js and the date fallback in lib/taskList.js already
+    // cover both. Tagged with subTab so the task list and reports can show
+    // each tab on its own instead of one merged, undifferentiated list.
     csvUrl: [
-      "https://docs.google.com/spreadsheets/d/1Eba1mtyjN0eF657EtkxHCuZZfDSn-ng0XYr2cbfX63o/export?format=csv&gid=684750154",
-      "https://docs.google.com/spreadsheets/d/1Eba1mtyjN0eF657EtkxHCuZZfDSn-ng0XYr2cbfX63o/export?format=csv&gid=0",
+      { url: "https://docs.google.com/spreadsheets/d/1Eba1mtyjN0eF657EtkxHCuZZfDSn-ng0XYr2cbfX63o/export?format=csv&gid=684750154", subTab: "Daily" },
+      { url: "https://docs.google.com/spreadsheets/d/1Eba1mtyjN0eF657EtkxHCuZZfDSn-ng0XYr2cbfX63o/export?format=csv&gid=0", subTab: "Weekly" },
     ],
     appScriptUrl: "",
   },
