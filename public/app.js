@@ -1104,17 +1104,20 @@ function filteredTaskList() {
       if (!names.some((n) => taskOwnerFilters.has(n))) return false;
     }
     if (q && !t.task.toLowerCase().includes(q)) return false;
-    // Deadline is preferred, but most sheets leave it blank on the majority
-    // of tasks (measured ~83% at one point) — falling back to Date Received
-    // means a task with no deadline still gets judged by whether it was
-    // actually added in the selected window, rather than either being
-    // wrongly excluded (checking a deadline that was never set) or always
-    // shown regardless of range (which stopped "This week" from meaning
-    // anything for undated work). A task with neither date at all has no
-    // way to confirm it belongs to the range, so it's kept rather than
-    // guessed away.
-    const anchor = t.deadline || t.dateReceived;
-    if (range && anchor && !isWithinRange(anchor, range)) return false;
+    // A task matches the range if EITHER date lands in it, not just
+    // whichever one wins a fallback priority. Deadline-only fallback broke
+    // exactly the tasks it was meant to rescue: a task added this week but
+    // due in a later one (e.g. Date Received 18 Aug, Deadline 28 Aug) was
+    // getting excluded from "This week" because its deadline didn't match,
+    // even though it genuinely was added this week. Checking both and
+    // requiring only one to match covers "added this week" and "due this
+    // week" simultaneously. A task with neither date at all has no way to
+    // confirm it belongs to the range, so it's kept rather than guessed away.
+    if (range && (t.deadline || t.dateReceived)) {
+      const deadlineMatches = t.deadline && isWithinRange(t.deadline, range);
+      const receivedMatches = t.dateReceived && isWithinRange(t.dateReceived, range);
+      if (!deadlineMatches && !receivedMatches) return false;
+    }
     return true;
   });
   // Newest received first — ISO date strings sort correctly with plain
