@@ -1045,6 +1045,7 @@ function filteredTaskList() {
 function renderTaskListTable() {
   const wrap = document.getElementById("taskListWrap");
   const countEl = document.getElementById("taskListCount");
+  renderOwnerFilterChips();
 
   if (taskListLoading) {
     wrap.innerHTML = `<p class="empty-note loading-note"><span class="loading-spinner" aria-hidden="true"></span> Loading tasks…</p>`;
@@ -1303,25 +1304,62 @@ document.getElementById("taskSearch").addEventListener("input", (e) => {
   renderTaskListTable();
 });
 document.getElementById("taskOwnerSelect").addEventListener("change", (e) => {
-  // The dropdown is a single-pick shortcut — choosing a name here replaces
-  // whatever badge selections were active, rather than adding to them.
-  taskOwnerFilters = e.target.value ? new Set([e.target.value]) : new Set();
-  renderTaskListTable();
+  // Adds to the active set rather than replacing it — picking "Chinmay"
+  // then "Aditi" stacks both. Once a filter narrows the table, every other
+  // person's row (and their in-row badge) drops out of view, so the
+  // dropdown is the only way left to add a second name — it has to keep
+  // offering every name, not just ones still visible in the filtered list.
+  // Resets to the placeholder immediately after so it's ready for the next
+  // pick instead of visually "sticking" on one name while representing a
+  // multi-name set.
+  if (e.target.value) {
+    taskOwnerFilters.add(e.target.value);
+    e.target.value = "";
+    renderTaskListTable();
+  }
 });
-// Toggle one name in/out of the active owner filter set — used by the
-// clickable name badges in the Assigned To column. Exported to module scope
-// (not just used inline) so renderTaskListTable's badges can call it.
+// Toggle one name in/out of the active owner filter set — used by both the
+// clickable name badges in the Assigned To column and the removable chips
+// above the table. Module-scope (not just used inline) so both call it.
 function toggleOwnerFilter(name) {
   if (taskOwnerFilters.has(name)) taskOwnerFilters.delete(name);
   else taskOwnerFilters.add(name);
-  // Keep the dropdown in sync when it can represent the current state (one
-  // name, or none) — a multi-name selection has no single dropdown value,
-  // so it just falls back to "All owners" without losing the real filter.
-  const select = document.getElementById("taskOwnerSelect");
-  if (select) {
-    select.value = taskOwnerFilters.size === 1 ? [...taskOwnerFilters][0] : "";
-  }
   renderTaskListTable();
+}
+
+// A persistent record of the active owner filters, shown above the table so
+// it survives the list narrowing down to rows that no longer include every
+// selected person's own badge — without this, there'd be no visible way to
+// remove (or even see) a filter for someone whose rows got filtered out by
+// a different active filter.
+function renderOwnerFilterChips() {
+  const el = document.getElementById("ownerFilterChips");
+  if (!el) return;
+  if (taskOwnerFilters.size === 0) {
+    el.hidden = true;
+    el.innerHTML = "";
+    return;
+  }
+  el.hidden = false;
+  el.innerHTML =
+    `<span class="owner-filter-chips-label">Filtered by:</span>` +
+    [...taskOwnerFilters]
+      .map(
+        (name) =>
+          `<button type="button" class="owner-badge active" data-owner-name="${escapeHTML(name)}">${escapeHTML(name)} ×</button>`
+      )
+      .join("") +
+    `<button type="button" class="link-btn" id="clearOwnerFiltersBtn">Clear</button>`;
+  el.querySelectorAll(".owner-badge").forEach((btn) => {
+    btn.addEventListener("click", () => toggleOwnerFilter(btn.dataset.ownerName));
+  });
+  const clearBtn = document.getElementById("clearOwnerFiltersBtn");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      taskOwnerFilters.clear();
+      renderTaskListTable();
+    });
+  }
 }
 document.getElementById("taskStatusSelect").addEventListener("change", (e) => {
   taskStatusFilter = e.target.value;

@@ -744,6 +744,23 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   font-weight: 700;
 }
 
+.owner-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0 14px;
+}
+.owner-filter-chips-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+.owner-filter-chips .link-btn {
+  margin-left: 6px;
+}
+
 .badge {
   display: inline-block;
   font-size: 11px;
