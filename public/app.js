@@ -123,13 +123,16 @@ function badgeHTML(source) {
   return '<span class="badge empty">No data</span>';
 }
 
-let currentDateRange = "week"; // "all" | "week" | "month" | "7d" | "30d" — shared filter across stat tiles, chart, and the task table
+let currentDateRange = "week"; // "all" | "today" | "week" | "month" | "7d" | "30d" — shared filter across stat tiles, chart, and the task table
 
 /** UTC {start, end} Date bounds for a date-range filter value, or null for "all". */
 function dateRangeBounds(range) {
   if (range === "all" || !range) return null;
   const now = new Date();
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  if (range === "today") {
+    return { start: today, end: today };
+  }
   if (range === "week") {
     const start = isoWeekStartClient(today);
     const end = new Date(start);
