@@ -164,6 +164,22 @@ function isWithinRange(isoDateStr, range) {
   return d.getTime() >= range.start.getTime() && d.getTime() <= range.end.getTime();
 }
 
+/** Whether a chart PERIOD (not a single-day task date) overlaps a date
+ * range — a weekly period's periodStart is always its Monday, spanning 7
+ * days from there, so checking that single point against a narrow range
+ * (e.g. "Today") almost never matches even when today genuinely falls
+ * inside that week. This checks for any overlap between the period's own
+ * span and the range, instead of treating periodStart as a point in time. */
+function periodOverlapsRange(periodStart, range, granularity) {
+  if (!range) return true;
+  if (!periodStart) return false;
+  const start = new Date(`${periodStart}T00:00:00Z`);
+  const periodDays = granularity === "daily" ? 1 : 7;
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + periodDays - 1);
+  return start.getTime() <= range.end.getTime() && end.getTime() >= range.start.getTime();
+}
+
 /** Sum a weekly/daily series' per-period status counts into one totals object. */
 function sumSeriesTotals(series) {
   const totals = { overdue: 0, pending: 0, in_progress: 0, completed: 0 };
@@ -180,8 +196,13 @@ function sumSeriesTotals(series) {
  * dated tasks fall in this range, by current status," which is what a
  * date-range filter should mean. */
 function scopedView(data) {
-  const seriesKey = currentGranularity === "daily" ? "daily" : "weekly";
-  const perSheetSeriesKey = currentGranularity === "daily" ? "perSheetDaily" : "perSheetWeekly";
+  // "Today" needs day-level precision no matter which chart granularity the
+  // user has chosen — a weekly bucket spans 7 days, so even with overlap
+  // detection (see periodOverlapsRange) it would report the whole week's
+  // totals for a single-day filter, which isn't what "Today" means.
+  const effectiveGranularity = currentDateRange === "today" ? "daily" : currentGranularity;
+  const seriesKey = effectiveGranularity === "daily" ? "daily" : "weekly";
+  const perSheetSeriesKey = effectiveGranularity === "daily" ? "perSheetDaily" : "perSheetWeekly";
 
   let label, totals, series, taskCount, source;
   if (currentScope === "total") {
@@ -201,7 +222,7 @@ function scopedView(data) {
 
   const range = dateRangeBounds(currentDateRange);
   if (range) {
-    series = series.filter((p) => isWithinRange(p.periodStart, range));
+    series = series.filter((p) => periodOverlapsRange(p.periodStart, range, effectiveGranularity));
     totals = sumSeriesTotals(series);
     taskCount = STATUS_ORDER.reduce((sum, s) => sum + (totals[s] || 0), 0);
   }
