@@ -100,6 +100,23 @@ function fmt(n) {
   return String(n);
 }
 
+const MONTH_NAMES_SHORT = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+// "2026-08-20" -> "20 August" — leading with the year read backwards to
+// scan; day-then-month-in-words is how these get read out loud.
+function formatDisplayDate(isoStr) {
+  if (!isoStr) return "";
+  const parts = isoStr.split("-");
+  if (parts.length !== 3) return isoStr;
+  const [, month, day] = parts;
+  const monthName = MONTH_NAMES_SHORT[Number(month) - 1];
+  if (!monthName) return isoStr;
+  return `${Number(day)} ${monthName}`;
+}
+
 function badgeHTML(source) {
   if (source === "live") return '<span class="badge live">Live</span>';
   if (source === "demo") return '<span class="badge demo">Demo data</span>';
@@ -1025,10 +1042,17 @@ function filteredTaskList() {
       if (!names.some((n) => taskOwnerFilters.has(n))) return false;
     }
     if (q && !t.task.toLowerCase().includes(q)) return false;
-    // Filtering by deadline specifically (the only per-task date exposed to
-    // the client) — tasks with no deadline are excluded once a range is
-    // active, same as "undated" tasks drop out of the chart/stat-tile view.
-    if (range && !isWithinRange(t.deadline, range)) return false;
+    // Deadline is preferred, but most sheets leave it blank on the majority
+    // of tasks (measured ~83% at one point) — falling back to Date Received
+    // means a task with no deadline still gets judged by whether it was
+    // actually added in the selected window, rather than either being
+    // wrongly excluded (checking a deadline that was never set) or always
+    // shown regardless of range (which stopped "This week" from meaning
+    // anything for undated work). A task with neither date at all has no
+    // way to confirm it belongs to the range, so it's kept rather than
+    // guessed away.
+    const anchor = t.deadline || t.dateReceived;
+    if (range && anchor && !isWithinRange(anchor, range)) return false;
     return true;
   });
   // Newest received first — ISO date strings sort correctly with plain
@@ -1086,8 +1110,8 @@ function renderTaskListTable() {
         ${teamCell}
         <td>${ownerBadgesHTML(t.assignedTo)}</td>
         <td><span class="badge ${t.status}">${currentData.statusLabels[t.status]}</span></td>
-        <td>${t.dateReceived || '<span class="text-muted-cell">—</span>'}</td>
-        <td>${t.deadline || '<span class="text-muted-cell">—</span>'}</td>
+        <td>${t.dateReceived ? formatDisplayDate(t.dateReceived) : '<span class="text-muted-cell">—</span>'}</td>
+        <td>${t.deadline ? formatDisplayDate(t.deadline) : '<span class="text-muted-cell">—</span>'}</td>
       </tr>${noteRow}`;
     })
     .join("");
