@@ -1321,6 +1321,8 @@ const REMINDER_META = {
       `Reminder: please cross-check the status and notes of all *${scopeName}* tasks in the Task Tracker for the whole week before it closes out.`,
   },
 };
+// Keyed by team (scope), not one shared number — a receiver number typed in
+// while looking at FO shouldn't show up again when switching to R&D.
 const REMINDER_NUMBERS_KEY = "taskTrackerReminderNumbers";
 
 function loadReminderNumbers() {
@@ -1330,9 +1332,14 @@ function loadReminderNumbers() {
     return {};
   }
 }
-function saveReminderNumbers(n1) {
+function getReminderNumber(scope) {
+  return loadReminderNumbers()[scope] || "";
+}
+function saveReminderNumber(scope, n1) {
   try {
-    localStorage.setItem(REMINDER_NUMBERS_KEY, JSON.stringify({ n1 }));
+    const all = loadReminderNumbers();
+    all[scope] = n1;
+    localStorage.setItem(REMINDER_NUMBERS_KEY, JSON.stringify(all));
   } catch {
     // localStorage unavailable (e.g. private browsing) — not worth failing over
   }
@@ -1349,8 +1356,7 @@ function openReminderModal(type) {
     currentScope === "total" ? "all teams" : (currentData.perSheet[currentScope] || {}).name || currentScope;
   document.getElementById("reminderModalHeading").textContent = meta.heading;
   document.getElementById("reminderMessage").value = meta.message(scopeName);
-  const saved = loadReminderNumbers();
-  document.getElementById("reminderNumber1").value = saved.n1 || "";
+  document.getElementById("reminderNumber1").value = getReminderNumber(currentScope);
   document.getElementById("reminderModalOverlay").hidden = false;
 }
 function closeReminderModal() {
@@ -1370,7 +1376,7 @@ document.addEventListener("keydown", (e) => {
 // Persist on every edit (not just on Send) — a number typed in and then
 // cancelled out of should still be there next time the modal opens.
 function persistReminderNumberFields() {
-  saveReminderNumbers(document.getElementById("reminderNumber1").value.trim());
+  saveReminderNumber(currentScope, document.getElementById("reminderNumber1").value.trim());
 }
 document.getElementById("reminderNumber1").addEventListener("input", persistReminderNumberFields);
 document.getElementById("reminderSendBtn").addEventListener("click", () => {
