@@ -364,7 +364,7 @@ body {
   display: flex;
   gap: 2px;
   padding: 4px;
-  margin-bottom: 14px;
+  margin-bottom: 24px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -372,15 +372,26 @@ body {
 }
 
 .date-range-row {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 50;
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 24px;
+  padding: 10px 16px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow-hover);
 }
 .date-range-label {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 #dateRangeSelect { max-width: 160px; }
 .tab-indicator {
