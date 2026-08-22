@@ -24,6 +24,10 @@
         <stop offset="0%" style="stop-color:var(--status-pending);stop-opacity:1" />
         <stop offset="100%" style="stop-color:var(--status-pending);stop-opacity:0.7" />
       </linearGradient>
+      <linearGradient id="gradAwaitingApproval" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" style="stop-color:var(--status-awaiting-approval);stop-opacity:1" />
+        <stop offset="100%" style="stop-color:var(--status-awaiting-approval);stop-opacity:0.7" />
+      </linearGradient>
       <linearGradient id="gradInProgress" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" style="stop-color:var(--status-in-progress);stop-opacity:1" />
         <stop offset="100%" style="stop-color:var(--status-in-progress);stop-opacity:0.7" />
@@ -159,6 +163,7 @@
             <option value="">All statuses</option>
             <option value="overdue">Overdue</option>
             <option value="pending">Pending</option>
+            <option value="awaiting_approval">Awaiting Approval</option>
             <option value="in_progress">In Progress</option>
             <option value="completed">Completed</option>
           </select>

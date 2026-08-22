@@ -1,7 +1,8 @@
-const STATUS_ORDER = ["overdue", "pending", "in_progress", "completed"];
+const STATUS_ORDER = ["overdue", "pending", "awaiting_approval", "in_progress", "completed"];
 const STATUS_COLOR = {
   overdue: "var(--status-overdue)",
   pending: "var(--status-pending)",
+  awaiting_approval: "var(--status-awaiting-approval)",
   in_progress: "var(--status-in-progress)",
   completed: "var(--status-completed)",
 };
@@ -13,6 +14,7 @@ const STATUS_COLOR_RESOLVED = {};
 const STATUS_GRADIENT_ID = {
   overdue: "gradOverdue",
   pending: "gradPending",
+  awaiting_approval: "gradAwaitingApproval",
   in_progress: "gradInProgress",
   completed: "gradCompleted",
 };
@@ -506,10 +508,11 @@ ${bodyHTML}
 const STATUS_WORD_CLASS = {
   "Not Started": "pending",
   "On Hold": "hold",
+  "Awaiting Approval": "awaiting-approval",
   WIP: "in-progress",
   Done: "completed",
 };
-const STATUS_WORD_RE = /\b(Not Started|On Hold|WIP|Done)\b/g;
+const STATUS_WORD_RE = /\b(Not Started|On Hold|Awaiting Approval|WIP|Done)\b/g;
 const REPORT_CALLOUT_PREFIXES = ["**Focus this week:**", "**Tomorrow's priority:**"];
 
 function highlightStatusWords(html) {

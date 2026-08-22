@@ -22,9 +22,10 @@
   --panel-bg:       rgba(252,252,251,0.72);
   --glow-accent:    rgba(42,120,214,0.38);
 
-  --status-pending:      #2a78d6; /* categorical blue: not yet started */
-  --status-in-progress:  #fab219; /* status warning: actively being worked */
-  --status-completed:    #0ca30c; /* status good */
+  --status-pending:            #2a78d6; /* categorical blue: not yet started */
+  --status-awaiting-approval:  #0f9488; /* categorical teal: done, waiting on someone else's sign-off */
+  --status-in-progress:        #fab219; /* status warning: actively being worked */
+  --status-completed:          #0ca30c; /* status good */
   --status-serious:      #ec835a; /* mode-invariant: used only for "bad" deltas, distinct from the swatches above */
   --status-overdue:      #d03b3b; /* mode-invariant: status "critical" — incomplete work past its deadline */
   --accent-violet:       #4a3aa7; /* categorical slot 7, reused only for UI chrome (the AI button gradient), never as a data mark */
@@ -50,9 +51,10 @@
     --panel-bg:       rgba(24,24,26,0.6);
     --glow-accent:    rgba(57,135,229,0.45);
 
-    --status-pending:      #3987e5;
-    --status-in-progress:  #fab219;
-    --status-completed:    #0ca30c;
+    --status-pending:            #3987e5;
+    --status-awaiting-approval:  #2dd4bf;
+    --status-in-progress:        #fab219;
+    --status-completed:          #0ca30c;
     --accent-violet:       #9085e9;
   }
 }
@@ -790,6 +792,7 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
 .badge.empty { color: var(--text-muted); }
 .badge.overdue { color: var(--status-overdue); border-color: var(--status-overdue); background: color-mix(in srgb, var(--status-overdue) 12%, transparent); }
 .badge.pending { color: var(--status-pending); border-color: var(--status-pending); background: color-mix(in srgb, var(--status-pending) 12%, transparent); }
+.badge.awaiting_approval { color: var(--status-awaiting-approval); border-color: var(--status-awaiting-approval); background: color-mix(in srgb, var(--status-awaiting-approval) 12%, transparent); }
 .badge.in_progress { color: var(--status-in-progress); border-color: var(--status-in-progress); background: color-mix(in srgb, var(--status-in-progress) 16%, transparent); }
 .badge.completed { color: var(--status-completed); border-color: var(--status-completed); background: color-mix(in srgb, var(--status-completed) 12%, transparent); }
 
@@ -917,6 +920,10 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   background: var(--surface-2);
   color: var(--text-secondary);
   border: 1px solid var(--border);
+}
+.status-word-awaiting-approval {
+  background: color-mix(in srgb, var(--status-awaiting-approval) 16%, transparent);
+  color: var(--status-awaiting-approval);
 }
 
 /* The per-team "Overall" wrap-up bullet — set apart as a summary line. */
