@@ -15,7 +15,8 @@ export default async function handler(req, res) {
     const rawType = req.query && req.query.type;
     const type = ["plan", "eod"].includes(rawType) ? rawType : "summary";
     const week = (req.query && req.query.week) || null; // Monday (YYYY-MM-DD); summary-mode only
-    const { text: report, dateLabel } = await generateReport(payload, rawSheets, scope, type, week);
+    const day = (req.query && req.query.day) || null; // YYYY-MM-DD; eod-mode only
+    const { text: report, dateLabel } = await generateReport(payload, rawSheets, scope, type, week, day);
     res.status(200).json({ report, dateLabel, generatedAt: new Date().toISOString() });
   } catch (err) {
     console.error(err);

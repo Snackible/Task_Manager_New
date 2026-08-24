@@ -50,6 +50,7 @@ function render(data) {
   renderScopedView(data);
   renderFooter(data);
   populateWeekSelect(data);
+  populateDaySelect(data);
   loadTaskList(currentScope);
 
   const dt = new Date(data.generatedAt);
@@ -66,6 +67,7 @@ function silentRefresh(data) {
   renderScopedContent(data);
   renderFooter(data);
   populateWeekSelect(data);
+  populateDaySelect(data);
   loadTaskList(currentScope);
 
   const dt = new Date(data.generatedAt);
@@ -79,9 +81,18 @@ function isoWeekStartClient(date) {
   return d;
 }
 
+/** Today, as a UTC-midnight Date representing the browser's LOCAL calendar
+ * day — mirrors the server's todayIST() (lib/dateUtils.js). Reading UTC
+ * getters off `new Date()` instead made "today" silently roll back a day
+ * for the ~5.5 hours after local midnight in IST, since UTC lags IST. */
+function localToday() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+}
+
 function populateWeekSelect(data) {
   const select = document.getElementById("reportWeekSelect");
-  const thisWeekStart = isoWeekStartClient(new Date()).toISOString().slice(0, 10);
+  const thisWeekStart = isoWeekStartClient(localToday()).toISOString().slice(0, 10);
   const weeksMap = new Map();
   for (const w of data.weekly || []) weeksMap.set(w.periodStart, w.label);
   if (!weeksMap.has(thisWeekStart)) weeksMap.set(thisWeekStart, "no data yet");
@@ -95,6 +106,37 @@ function populateWeekSelect(data) {
     })
     .join("");
   select.value = entries.some(([p]) => p === prevValue) ? prevValue : thisWeekStart;
+}
+
+/** Same idea as populateWeekSelect, for the EOD report's day picker — lets
+ * you generate the recap for yesterday (or any past day with data) instead
+ * of always whatever day the server auto-detects as "most recent". Days
+ * after today are excluded — a future Deadline can still create a daily
+ * bucket for that day (see lib/aiReport.js's latestDailyPeriod), and
+ * picking one wouldn't mean anything for an end-of-day recap. */
+function populateDaySelect(data) {
+  const select = document.getElementById("reportDaySelect");
+  const todayISO = localToday().toISOString().slice(0, 10);
+  const yesterday = new Date(localToday());
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const yesterdayISO = yesterday.toISOString().slice(0, 10);
+
+  const daysMap = new Map();
+  for (const d of data.daily || []) {
+    if (d.periodStart <= todayISO) daysMap.set(d.periodStart, d.label);
+  }
+  if (!daysMap.has(todayISO)) daysMap.set(todayISO, "no data yet");
+
+  const entries = Array.from(daysMap.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  const prevValue = select.value;
+  select.innerHTML = entries
+    .map(([periodStart, label]) => {
+      const text =
+        periodStart === todayISO ? `Today (${label})` : periodStart === yesterdayISO ? `Yesterday (${label})` : label;
+      return `<option value="${periodStart}">${text}</option>`;
+    })
+    .join("");
+  select.value = entries.some(([p]) => p === prevValue) ? prevValue : todayISO;
 }
 
 function fmt(n) {
@@ -130,8 +172,7 @@ let currentDateRange = "week"; // "all" | "today" | "week" | "month" | "7d" | "3
 /** UTC {start, end} Date bounds for a date-range filter value, or null for "all". */
 function dateRangeBounds(range) {
   if (range === "all" || !range) return null;
-  const now = new Date();
-  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const today = localToday();
   if (range === "today") {
     return { start: today, end: today };
   }
@@ -595,6 +636,10 @@ async function generateReport() {
     if (currentReportMode === "summary") {
       const week = document.getElementById("reportWeekSelect").value;
       if (week) url += `&week=${encodeURIComponent(week)}`;
+    }
+    if (currentReportMode === "eod") {
+      const day = document.getElementById("reportDaySelect").value;
+      if (day) url += `&day=${encodeURIComponent(day)}`;
     }
     const res = await fetch(url, { method: "POST" });
     const json = await res.json();
@@ -1302,6 +1347,7 @@ document.querySelectorAll("#reportModeToggle .seg-btn").forEach((btn) => {
     currentReportMode = m;
     document.querySelectorAll("#reportModeToggle .seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
     document.getElementById("reportWeekSelect").hidden = m !== "summary";
+    document.getElementById("reportDaySelect").hidden = m !== "eod";
     const scopeLabel = currentScope === "total" ? "Total" : currentData.perSheet[currentScope].name;
     resetReportPanel(scopeLabel);
   });
