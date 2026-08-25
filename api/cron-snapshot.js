@@ -8,8 +8,9 @@ import { saveTodaySnapshot } from "../lib/snapshotStore.js";
 export default async function handler(req, res) {
   const authHeader = req.headers.authorization;
   const cronSecret = process.env.CRON_SECRET;
-  console.log("[cron-snapshot] auth check:", {
-    hasSecret: !!cronSecret,
+  console.log("[cron-snapshot] env check:", {
+    hasCronSecret: !!cronSecret,
+    hasBlobToken: !!process.env.BLOB_READ_WRITE_TOKEN,
     hasHeader: !!authHeader,
     headerValue: authHeader ? authHeader.slice(0, 20) + "..." : null,
   });
