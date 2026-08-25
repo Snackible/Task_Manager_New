@@ -409,6 +409,7 @@ function resetReportPanel(scopeLabel) {
   const btn = document.getElementById("reportBtn");
   btn.disabled = false;
   document.getElementById("reportIcon").classList.remove("spin");
+  document.getElementById("reportCopyBtn").hidden = true;
   document.getElementById("reportPdfBtn").hidden = true;
   const meta = REPORT_MODE_META[currentReportMode];
   const scopeText = scopeLabel === "Total" ? "all teams'" : scopeLabel + "'s";
@@ -542,6 +543,20 @@ ${bodyHTML}
   win.print();
 }
 
+async function copyReportToClipboard() {
+  const body = document.getElementById("reportBody");
+  const text = body.innerText;
+  try {
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById("reportCopyBtn");
+    const originalTitle = btn.title;
+    btn.title = "Copied!";
+    setTimeout(() => { btn.title = originalTitle; }, 2000);
+  } catch (err) {
+    alert("Failed to copy report: " + err.message);
+  }
+}
+
 // The four status words the model is instructed to weave into report prose
 // (see STYLE_RULES in lib/aiReport.js) — highlighted as colored pills so the
 // report reads at a glance, using the same status palette as the rest of
@@ -651,11 +666,13 @@ async function generateReport() {
       : "AI Report";
     replayFadeIn(body);
     label.textContent = meta.regenerateLabel;
+    document.getElementById("reportCopyBtn").hidden = false;
     document.getElementById("reportPdfBtn").hidden = false;
   } catch (err) {
     body.innerHTML = `<p class="report-error"><span class="err-icon">&#9888;</span> Couldn't generate ${meta.errorNoun}: ${err.message}</p>`;
     currentReportDateLabel = null;
     label.textContent = meta.buttonLabel;
+    document.getElementById("reportCopyBtn").hidden = true;
     document.getElementById("reportPdfBtn").hidden = true;
   } finally {
     btn.disabled = false;
@@ -1312,6 +1329,7 @@ async function refresh() {
 
 document.getElementById("refreshBtn").addEventListener("click", refresh);
 document.getElementById("reportBtn").addEventListener("click", generateReport);
+document.getElementById("reportCopyBtn").addEventListener("click", copyReportToClipboard);
 document.getElementById("reportPdfBtn").addEventListener("click", saveReportAsPdf);
 document.getElementById("toggleTableBtn").addEventListener("click", () => {
   const chart = document.getElementById("chartWrap");
