@@ -8,6 +8,11 @@ import { saveTodaySnapshot } from "../lib/snapshotStore.js";
 export default async function handler(req, res) {
   const authHeader = req.headers.authorization;
   const cronSecret = process.env.CRON_SECRET;
+  console.log("[cron-snapshot] auth check:", {
+    hasSecret: !!cronSecret,
+    hasHeader: !!authHeader,
+    headerValue: authHeader ? authHeader.slice(0, 20) + "..." : null,
+  });
   if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     res.status(401).json({ error: "Unauthorized" });
     return;
