@@ -10,6 +10,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export default async function handler(req, res) {
   const authHeader = req.headers.authorization;
   const adminSecret = process.env.ADMIN_SEED_SECRET;
+  console.log("[admin-seed-snapshot] env check:", { hasAdminSecret: !!adminSecret, hasHeader: !!authHeader });
   if (!adminSecret || authHeader !== `Bearer ${adminSecret}`) {
     res.status(401).json({ error: "Unauthorized" });
     return;
