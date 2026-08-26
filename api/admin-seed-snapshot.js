@@ -32,7 +32,11 @@ export default async function handler(req, res) {
     }
 
     const pathname = `${SNAPSHOT_PREFIX}${date}.json`;
-    await put(pathname, JSON.stringify(sheets), { access: "private", contentType: "application/json" });
+    await put(pathname, JSON.stringify(sheets), {
+      access: "private",
+      contentType: "application/json",
+      allowOverwrite: true,
+    });
     res.status(200).json({ ok: true, date, teams: Object.keys(sheets) });
   } catch (err) {
     console.error("[admin-seed-snapshot] failed:", err);
