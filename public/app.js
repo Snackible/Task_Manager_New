@@ -32,6 +32,46 @@ let currentGranularity = "weekly"; // "weekly" or "daily" — which series feeds
 let currentReportMode = "summary"; // "summary" (retrospective) or "plan" (WIP + Not Started)
 let currentReportDateLabel = null; // e.g. "Week of Aug 11–17, 2026" — the data the current report covers, not when it was generated
 
+// Generated reports persist server-side (see lib/reportStore.js) across page
+// reloads, the manual Refresh button, and different devices/browsers — a
+// report should only disappear when the user explicitly clicks Regenerate,
+// switches team/mode, or picks a different week/day. Keyed by exactly what
+// the report was generated for, so switching back to a scope/mode/week/day
+// combo someone already generated restores it instead of showing empty.
+function reportExtraParam() {
+  if (currentReportMode === "summary") return document.getElementById("reportWeekSelect").value || "";
+  if (currentReportMode === "eod") return document.getElementById("reportDaySelect").value || "";
+  return "";
+}
+async function loadReportFromStorage(scope, mode, extra) {
+  try {
+    let url = `/api/report?scope=${encodeURIComponent(scope)}&type=${encodeURIComponent(mode)}`;
+    if (extra) url += mode === "summary" ? `&week=${encodeURIComponent(extra)}` : `&day=${encodeURIComponent(extra)}`;
+    const res = await fetch(url, { method: "GET" });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.report ? json : null;
+  } catch {
+    return null; // offline / network hiccup — just show the empty state
+  }
+}
+
+/** Paints a generated report (freshly fetched or restored from storage)
+ * into the panel — the shared final step for both paths so they can't
+ * silently drift apart. */
+function renderReportPanel(reportText, dateLabel) {
+  const body = document.getElementById("reportBody");
+  body.innerHTML = renderMarkdownLite(reportText);
+  currentReportDateLabel = dateLabel || null;
+  document.getElementById("reportTitle").textContent = currentReportDateLabel
+    ? `AI Report — ${currentReportDateLabel}`
+    : "AI Report";
+  replayFadeIn(body);
+  document.getElementById("reportLabel").textContent = REPORT_MODE_META[currentReportMode].regenerateLabel;
+  document.getElementById("reportCopyBtn").hidden = false;
+  document.getElementById("reportPdfBtn").hidden = false;
+}
+
 async function loadData() {
   const res = await fetch("/api/tasks");
   if (!res.ok) throw new Error(`API error ${res.status}`);
@@ -403,12 +443,9 @@ const REPORT_MODE_META = {
   },
 };
 
-function resetReportPanel(scopeLabel) {
+function showReportEmptyState(scopeLabel) {
   document.getElementById("reportTitle").textContent = "AI Report";
   currentReportDateLabel = null;
-  const btn = document.getElementById("reportBtn");
-  btn.disabled = false;
-  document.getElementById("reportIcon").classList.remove("spin");
   document.getElementById("reportCopyBtn").hidden = true;
   document.getElementById("reportPdfBtn").hidden = true;
   const meta = REPORT_MODE_META[currentReportMode];
@@ -419,6 +456,36 @@ function resetReportPanel(scopeLabel) {
       <div class="report-empty-icon">${REPORT_EMPTY_ICON_SVG}</div>
       <p>${meta.emptyText(scopeText)}</p>
     </div>`;
+}
+
+// Guards against a slow restore fetch resolving after the user has already
+// moved on to a different scope/mode — without this, an old response could
+// land late and overwrite whatever they're looking at now.
+let reportPanelRequestId = 0;
+
+/** Called whenever the scope/mode changes (including a full re-render on
+ * page load or manual Refresh) — restores a previously generated report for
+ * the new scope/mode/week-day combo from the server if one exists, so a
+ * report only ever disappears when the user explicitly regenerates it.
+ * Shows the empty-state prompt immediately (so the panel isn't left
+ * displaying the PREVIOUS combo's report while this checks), then swaps in
+ * the restored report if the lookup finds one. */
+async function resetReportPanel(scopeLabel) {
+  const btn = document.getElementById("reportBtn");
+  btn.disabled = false;
+  document.getElementById("reportIcon").classList.remove("spin");
+
+  const scope = currentScope;
+  const mode = currentReportMode;
+  const extra = reportExtraParam();
+  showReportEmptyState(scopeLabel);
+
+  const requestId = ++reportPanelRequestId;
+  const stored = await loadReportFromStorage(scope, mode, extra);
+  if (requestId !== reportPanelRequestId) return; // superseded by a newer selection
+  if (stored && stored.report) {
+    renderReportPanel(stored.report, stored.dateLabel);
+  }
 }
 
 /** Opens a clean, printable copy of the current report in a new tab and
@@ -642,6 +709,7 @@ async function generateReport() {
   const icon = document.getElementById("reportIcon");
   const body = document.getElementById("reportBody");
   const meta = REPORT_MODE_META[currentReportMode];
+  reportPanelRequestId++; // supersede any in-flight restore-from-storage fetch
   btn.disabled = true;
   label.textContent = meta.generatingLabel;
   icon.classList.add("spin");
@@ -659,15 +727,9 @@ async function generateReport() {
     const res = await fetch(url, { method: "POST" });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || `Report request failed (${res.status})`);
-    body.innerHTML = renderMarkdownLite(json.report);
-    currentReportDateLabel = json.dateLabel || null;
-    document.getElementById("reportTitle").textContent = currentReportDateLabel
-      ? `AI Report — ${currentReportDateLabel}`
-      : "AI Report";
-    replayFadeIn(body);
-    label.textContent = meta.regenerateLabel;
-    document.getElementById("reportCopyBtn").hidden = false;
-    document.getElementById("reportPdfBtn").hidden = false;
+    // Server persists this report too (see lib/reportStore.js) — no
+    // separate client-side save call needed for it to survive a reload.
+    renderReportPanel(json.report, json.dateLabel);
   } catch (err) {
     body.innerHTML = `<p class="report-error"><span class="err-icon">&#9888;</span> Couldn't generate ${meta.errorNoun}: ${err.message}</p>`;
     currentReportDateLabel = null;
@@ -808,8 +870,15 @@ function renderSeriesChart(series) {
     return;
   }
 
-  const plotW = width - marginLeft - marginRight;
+  const fullPlotW = width - marginLeft - marginRight;
   const plotH = height - marginTop - marginBottom;
+  // A handful of bars stretched across the full container width reads as
+  // broken, not minimal — each bar ends up marooned in its own acre of
+  // whitespace. Cap how wide a band is allowed to get, and center the
+  // resulting (narrower) cluster of bars in the available space instead.
+  const maxBandW = 110;
+  const plotW = Math.min(fullPlotW, series.length * maxBandW);
+  const plotOffsetX = marginLeft + (fullPlotW - plotW) / 2;
 
   // Must match every status actually drawn below (STATUS_ORDER includes
   // "overdue") — leaving it out here previously undercounted the true
@@ -827,15 +896,15 @@ function renderSeriesChart(series) {
     const y = marginTop + plotH - (t / niceMax) * plotH;
     svg.appendChild(
       svgEl("line", {
-        x1: marginLeft,
-        x2: width - marginRight,
+        x1: plotOffsetX,
+        x2: plotOffsetX + plotW,
         y1: y,
         y2: y,
         class: t === 0 ? "baseline" : "gridline",
       })
     );
     const label = svgEl("text", {
-      x: marginLeft - 8,
+      x: plotOffsetX - 8,
       y: y + 4,
       "text-anchor": "end",
       class: "axis-label",
@@ -845,7 +914,7 @@ function renderSeriesChart(series) {
   }
 
   const bandW = plotW / series.length;
-  const barW = Math.min(24, bandW * 0.5);
+  const barW = Math.min(32, bandW * 0.5);
   const gap = 2;
   // With many bars (dense daily views), a label on every one overlaps its
   // neighbors — thin them out so only every Nth bar is labeled, based on how
@@ -854,7 +923,7 @@ function renderSeriesChart(series) {
   const labelStride = Math.max(1, Math.ceil(estLabelW / bandW));
 
   series.forEach((period, i) => {
-    const cx = marginLeft + bandW * i + bandW / 2;
+    const cx = plotOffsetX + bandW * i + bandW / 2;
     let yCursor = marginTop + plotH; // bottom, we stack upward
     const total = STATUS_ORDER.reduce((sum, s) => sum + (period[s] || 0), 0);
 
@@ -872,7 +941,7 @@ function renderSeriesChart(series) {
         width: barW,
         height: Math.max(0, segH - (isTop ? 0 : gap / 2) - rectGap),
         fill: `url(#${STATUS_GRADIENT_ID[status]})`,
-        rx: isTop ? 4 : 0,
+        rx: isTop ? 6 : 0,
         class: "bar-seg",
       });
       rect.style.animationDelay = `${i * 35}ms`;
