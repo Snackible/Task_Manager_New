@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob";
+import { put, get } from "@vercel/blob";
 
 const SNAPSHOT_PREFIX = "snapshots/";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -15,6 +15,35 @@ export default async function handler(req, res) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
+
+  if (req.method === "GET") {
+    // Read-only existence/content check — never writes. ?date=YYYY-MM-DD
+    try {
+      const date = req.query && req.query.date;
+      if (!date || !DATE_RE.test(date)) {
+        res.status(400).json({ error: "Query must include date as YYYY-MM-DD" });
+        return;
+      }
+      const result = await get(`${SNAPSHOT_PREFIX}${date}.json`, { access: "private" });
+      if (!result) {
+        res.status(200).json({ exists: false, date });
+        return;
+      }
+      const sheets = await new Response(result.stream).json();
+      res.status(200).json({
+        exists: true,
+        date,
+        uploadedAt: result.uploadedAt,
+        teams: Object.keys(sheets),
+        rowCounts: Object.fromEntries(Object.entries(sheets).map(([k, rows]) => [k, rows.length])),
+      });
+    } catch (err) {
+      console.error("[admin-seed-snapshot] check failed:", err);
+      res.status(500).json({ error: err.message });
+    }
+    return;
+  }
+
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
     return;
