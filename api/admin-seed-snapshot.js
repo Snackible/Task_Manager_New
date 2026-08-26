@@ -1,4 +1,4 @@
-import { put, get } from "@vercel/blob";
+import { put, get, del } from "@vercel/blob";
 
 const SNAPSHOT_PREFIX = "snapshots/";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -39,6 +39,26 @@ export default async function handler(req, res) {
       });
     } catch (err) {
       console.error("[admin-seed-snapshot] check failed:", err);
+      res.status(500).json({ error: err.message });
+    }
+    return;
+  }
+
+  if (req.method === "DELETE") {
+    // Removes a stale snapshot so the next cron run is free to write a
+    // fresh one in its place (the "already captured" guard in
+    // snapshotStore.js otherwise blocks overwriting an existing file, even
+    // a known-incomplete one). ?date=YYYY-MM-DD
+    try {
+      const date = req.query && req.query.date;
+      if (!date || !DATE_RE.test(date)) {
+        res.status(400).json({ error: "Query must include date as YYYY-MM-DD" });
+        return;
+      }
+      await del(`${SNAPSHOT_PREFIX}${date}.json`);
+      res.status(200).json({ ok: true, deleted: date });
+    } catch (err) {
+      console.error("[admin-seed-snapshot] delete failed:", err);
       res.status(500).json({ error: err.message });
     }
     return;
