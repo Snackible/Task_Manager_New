@@ -1462,26 +1462,38 @@ const REMINDER_META = {
 };
 // Keyed by team (scope), not one shared number — a receiver number typed in
 // while looking at FO shouldn't show up again when switching to R&D.
-const REMINDER_NUMBERS_KEY = "taskTrackerReminderNumbers";
+// Persisted server-side (see lib/reminderStore.js) so a number saved on one
+// device/browser is still there on another, not just the one that typed it
+// — localStorage alone doesn't survive a reload on a different phone.
+// reminderNumbersCache holds the last-fetched map for synchronous reads
+// (the modal needs to populate its field immediately on open, not after an
+// await) — refreshed on page load and kept up to date optimistically on
+// every save.
+let reminderNumbersCache = {};
 
-function loadReminderNumbers() {
+async function loadReminderNumbersFromServer() {
   try {
-    return JSON.parse(localStorage.getItem(REMINDER_NUMBERS_KEY)) || {};
+    const res = await fetch("/api/reminder-numbers", { method: "GET" });
+    if (!res.ok) return;
+    const json = await res.json();
+    reminderNumbersCache = json.numbers || {};
   } catch {
-    return {};
+    // offline / network hiccup — modal just falls back to empty fields
   }
 }
 function getReminderNumber(scope) {
-  return loadReminderNumbers()[scope] || "";
+  return reminderNumbersCache[scope] || "";
 }
 function saveReminderNumber(scope, n1) {
-  try {
-    const all = loadReminderNumbers();
-    all[scope] = n1;
-    localStorage.setItem(REMINDER_NUMBERS_KEY, JSON.stringify(all));
-  } catch {
-    // localStorage unavailable (e.g. private browsing) — not worth failing over
-  }
+  reminderNumbersCache[scope] = n1; // optimistic — modal reads feel instant
+  fetch("/api/reminder-numbers", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ scope, number: n1 }),
+  }).catch(() => {
+    // save failed silently (offline etc.) — the number still shows locally
+    // this session, it just won't have made it to the server this time
+  });
 }
 function waLink(number, text) {
   const digits = number.replace(/\D/g, ""); // wa.me wants digits only: no +, spaces, dashes, or parens
@@ -1647,3 +1659,4 @@ loadData()
     document.getElementById("app").innerHTML = `<p style="padding:40px;color:#e34948">Failed to load dashboard: ${err.message}</p>`;
     hideLoadingOverlay();
   });
+loadReminderNumbersFromServer(); // independent of the dashboard data load above — reminder numbers aren't part of it
