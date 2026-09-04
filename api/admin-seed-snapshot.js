@@ -18,6 +18,10 @@ export default async function handler(req, res) {
 
   if (req.method === "GET") {
     // Read-only existence/content check — never writes. ?date=YYYY-MM-DD
+    // Optional ?full=true returns raw row content instead of just counts —
+    // scope it with ?team=<key> (recommended, avoids huge payloads) and/or
+    // ?task=<substring> (case-insensitive match on the task title) to pull
+    // just the row(s) needed to compare across days.
     try {
       const date = req.query && req.query.date;
       if (!date || !DATE_RE.test(date)) {
@@ -30,6 +34,22 @@ export default async function handler(req, res) {
         return;
       }
       const sheets = await new Response(result.stream).json();
+
+      const full = req.query && req.query.full === "true";
+      if (full) {
+        const team = req.query && req.query.team;
+        const taskFilter = req.query && req.query.task ? req.query.task.toLowerCase() : null;
+        const teamsToReturn = team ? { [team]: sheets[team] || [] } : sheets;
+        const rows = {};
+        for (const [key, teamRows] of Object.entries(teamsToReturn)) {
+          rows[key] = taskFilter
+            ? (teamRows || []).filter((r) => JSON.stringify(r).toLowerCase().includes(taskFilter))
+            : teamRows;
+        }
+        res.status(200).json({ exists: true, date, uploadedAt: result.uploadedAt, rows });
+        return;
+      }
+
       res.status(200).json({
         exists: true,
         date,
