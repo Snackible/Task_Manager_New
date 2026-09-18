@@ -6,28 +6,26 @@ import { saveReport, loadReport } from "../lib/reportStore.js";
 // can comfortably take under a minute even in the worst case, well within
 // Vercel's default 300s function duration — no custom maxDuration needed.
 
-/** The "extra" key that pins a report to a specific week/day beyond just
+/** The "extra" key that pins a report to a specific week beyond just
  * scope+type — mirrors the client's reportExtraParam() so a save and a
- * later restore land on the exact same storage key. */
-function reportExtraParam(type, week, day) {
-  if (type === "summary") return week || "";
-  if (type === "eod") return day || "";
-  return "";
+ * later restore land on the exact same storage key. Both summary and eow
+ * are week-scoped now (eow replaced the old day-scoped eod). */
+function reportExtraParam(type, week) {
+  return type === "plan" ? "" : week || "";
 }
 
 export default async function handler(req, res) {
   const scope = (req.query && req.query.scope) || "total";
   const rawType = req.query && req.query.type;
-  const type = ["plan", "eod"].includes(rawType) ? rawType : "summary";
-  const week = (req.query && req.query.week) || null; // Monday (YYYY-MM-DD); summary-mode only
-  const day = (req.query && req.query.day) || null; // YYYY-MM-DD; eod-mode only
-  const extra = reportExtraParam(type, week, day);
+  const type = ["plan", "eow"].includes(rawType) ? rawType : "summary";
+  const week = (req.query && req.query.week) || null; // Monday (YYYY-MM-DD); summary/eow modes
+  const extra = reportExtraParam(type, week);
 
   if (req.method === "GET") {
-    // Restores whatever was last generated for this exact scope/type/week-
-    // or-day combo, so the report panel survives a reload without asking
-    // Gemini again. report: null (not a 404) when nothing's been generated
-    // yet for this combo — that's a normal empty state, not an error.
+    // Restores whatever was last generated for this exact scope/type/week
+    // combo, so the report panel survives a reload without asking Gemini
+    // again. report: null (not a 404) when nothing's been generated yet for
+    // this combo — that's a normal empty state, not an error.
     try {
       const stored = await loadReport(scope, type, extra);
       res.status(200).json(stored || { report: null });
@@ -44,7 +42,7 @@ export default async function handler(req, res) {
   }
   try {
     const { payload, rawSheets } = await getDashboardData();
-    const { text: report, dateLabel } = await generateReport(payload, rawSheets, scope, type, week, day);
+    const { text: report, dateLabel } = await generateReport(payload, rawSheets, scope, type, week);
     const generatedAt = new Date().toISOString();
     try {
       await saveReport(scope, type, extra, { report, dateLabel });

@@ -5,7 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Task Tracker Dashboard</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='16' width='6' height='13' rx='1.5' fill='%232a78d6'/%3E%3Crect x='13' y='9' width='6' height='20' rx='1.5' fill='%23fab219'/%3E%3Crect x='23' y='3' width='6' height='26' rx='1.5' fill='%230ca30c'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/styles.css" />
+<script>
+  // Applied before first paint so a saved light theme doesn't flash dark
+  // (or vice versa) while app.js is still loading. No stored preference
+  // means no attribute at all, which leaves the CSS following the OS.
+  (function () {
+    try {
+      var saved = localStorage.getItem("theme");
+      if (saved === "light" || saved === "dark") {
+        document.documentElement.setAttribute("data-theme", saved);
+      }
+    } catch (e) {}
+  })();
+</script>
 </head>
 <body>
   <div class="loading-overlay" id="loadingOverlay">
@@ -50,6 +66,10 @@
           <span id="liveLabel">Live</span>
         </button>
         <span class="updated-at" id="updatedAt"></span>
+        <button class="btn btn-icon-only theme-toggle" id="themeToggle" type="button" aria-label="Switch theme" title="Switch to light theme">
+          <svg class="btn-icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+          <svg class="btn-icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        </button>
         <button class="btn btn-icon-only" id="refreshBtn" type="button" aria-label="Refresh" title="Refresh">
           <svg class="btn-icon" id="refreshIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
           <span id="refreshLabel" class="sr-only">Refresh</span>
@@ -57,21 +77,23 @@
       </div>
     </header>
 
-    <nav class="tab-bar" id="tabBar" aria-label="Team selector">
-      <div class="tab-indicator" id="tabIndicator"></div>
-      <!-- tab buttons injected by app.js -->
-    </nav>
+    <div class="control-row">
+      <nav class="tab-bar" id="tabBar" aria-label="Team selector">
+        <div class="tab-indicator" id="tabIndicator"></div>
+        <!-- tab buttons injected by app.js -->
+      </nav>
 
-    <div class="date-range-row">
-      <label class="date-range-label" for="dateRangeSelect">Date</label>
-      <select class="select-input" id="dateRangeSelect" aria-label="Date range filter">
-        <option value="all">All time</option>
-        <option value="today">Today</option>
-        <option value="week" selected>This week</option>
-        <option value="month">This month</option>
-        <option value="7d">Last 7 days</option>
-        <option value="30d">Last 30 days</option>
-      </select>
+      <div class="date-range-row">
+        <label class="date-range-label" for="dateRangeSelect">Period</label>
+        <select class="select-input" id="dateRangeSelect" aria-label="Date range filter">
+          <option value="all">All time</option>
+          <option value="today">Today</option>
+          <option value="week" selected>This week</option>
+          <option value="month">This month</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+        </select>
+      </div>
     </div>
 
     <section class="stat-row" id="statRow" aria-label="Current totals">
@@ -104,10 +126,9 @@
           <div class="seg-toggle" id="reportModeToggle" aria-label="Report type">
             <button type="button" class="seg-btn active" data-mode="summary">Summary</button>
             <button type="button" class="seg-btn" data-mode="plan">Weekly Plan</button>
-            <button type="button" class="seg-btn" data-mode="eod">End of Day</button>
+            <button type="button" class="seg-btn" data-mode="eow">End of Week</button>
           </div>
-          <select class="select-input" id="reportWeekSelect" aria-label="Week to summarize"></select>
-          <select class="select-input" id="reportDaySelect" aria-label="Day to recap" hidden></select>
+          <select class="select-input" id="reportWeekSelect" aria-label="Week to report on"></select>
           <button class="btn btn-icon-only" id="reportCopyBtn" type="button" aria-label="Copy report" title="Copy report to clipboard" hidden>
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3H5a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h5M14 3h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5M9 17H5c-1.1 0-2-.9-2-2"/></svg>
           </button>
@@ -133,9 +154,9 @@
         <h2>Reminders</h2>
       </div>
       <div class="reminder-row">
-        <button class="btn btn-reminder reminder-eod" type="button" data-reminder="eod">
+        <button class="btn btn-reminder reminder-eow" type="button" data-reminder="eow">
           <span class="reminder-icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
-          <span>Remind: EOD Update</span>
+          <span>Remind: EOW Update</span>
         </button>
         <button class="btn btn-reminder reminder-plan" type="button" data-reminder="plan">
           <span class="reminder-icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3M16 3v3M4 9h16M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z"/></svg></span>

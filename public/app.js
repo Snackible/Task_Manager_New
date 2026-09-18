@@ -35,18 +35,16 @@ let currentReportDateLabel = null; // e.g. "Week of Aug 11–17, 2026" — the d
 // Generated reports persist server-side (see lib/reportStore.js) across page
 // reloads, the manual Refresh button, and different devices/browsers — a
 // report should only disappear when the user explicitly clicks Regenerate,
-// switches team/mode, or picks a different week/day. Keyed by exactly what
-// the report was generated for, so switching back to a scope/mode/week/day
-// combo someone already generated restores it instead of showing empty.
+// switches team/mode, or picks a different week. Keyed by exactly what the
+// report was generated for, so switching back to a scope/mode/week combo
+// someone already generated restores it instead of showing empty.
 function reportExtraParam() {
-  if (currentReportMode === "summary") return document.getElementById("reportWeekSelect").value || "";
-  if (currentReportMode === "eod") return document.getElementById("reportDaySelect").value || "";
-  return "";
+  return currentReportMode === "plan" ? "" : document.getElementById("reportWeekSelect").value || "";
 }
 async function loadReportFromStorage(scope, mode, extra) {
   try {
     let url = `/api/report?scope=${encodeURIComponent(scope)}&type=${encodeURIComponent(mode)}`;
-    if (extra) url += mode === "summary" ? `&week=${encodeURIComponent(extra)}` : `&day=${encodeURIComponent(extra)}`;
+    if (extra) url += `&week=${encodeURIComponent(extra)}`;
     const res = await fetch(url, { method: "GET" });
     if (!res.ok) return null;
     const json = await res.json();
@@ -90,7 +88,6 @@ function render(data) {
   renderScopedView(data);
   renderFooter(data);
   populateWeekSelect(data);
-  populateDaySelect(data);
   loadTaskList(currentScope);
 
   const dt = new Date(data.generatedAt);
@@ -107,7 +104,6 @@ function silentRefresh(data) {
   renderScopedContent(data);
   renderFooter(data);
   populateWeekSelect(data);
-  populateDaySelect(data);
   loadTaskList(currentScope);
 
   const dt = new Date(data.generatedAt);
@@ -148,36 +144,6 @@ function populateWeekSelect(data) {
   select.value = entries.some(([p]) => p === prevValue) ? prevValue : thisWeekStart;
 }
 
-/** Same idea as populateWeekSelect, for the EOD report's day picker — lets
- * you generate the recap for yesterday (or any past day with data) instead
- * of always whatever day the server auto-detects as "most recent". Days
- * after today are excluded — a future Deadline can still create a daily
- * bucket for that day (see lib/aiReport.js's latestDailyPeriod), and
- * picking one wouldn't mean anything for an end-of-day recap. */
-function populateDaySelect(data) {
-  const select = document.getElementById("reportDaySelect");
-  const todayISO = localToday().toISOString().slice(0, 10);
-  const yesterday = new Date(localToday());
-  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-  const yesterdayISO = yesterday.toISOString().slice(0, 10);
-
-  const daysMap = new Map();
-  for (const d of data.daily || []) {
-    if (d.periodStart <= todayISO) daysMap.set(d.periodStart, d.label);
-  }
-  if (!daysMap.has(todayISO)) daysMap.set(todayISO, "no data yet");
-
-  const entries = Array.from(daysMap.entries()).sort((a, b) => b[0].localeCompare(a[0]));
-  const prevValue = select.value;
-  select.innerHTML = entries
-    .map(([periodStart, label]) => {
-      const text =
-        periodStart === todayISO ? `Today (${label})` : periodStart === yesterdayISO ? `Yesterday (${label})` : label;
-      return `<option value="${periodStart}">${text}</option>`;
-    })
-    .join("");
-  select.value = entries.some(([p]) => p === prevValue) ? prevValue : todayISO;
-}
 
 function fmt(n) {
   if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "K";
@@ -433,13 +399,13 @@ const REPORT_MODE_META = {
     emptyText: (scopeText) =>
       `Get a Monday-morning plan for ${scopeText} open work — what's WIP, what hasn't started, and what to focus on first.`,
   },
-  eod: {
-    buttonLabel: "Generate EOD Summary",
+  eow: {
+    buttonLabel: "Generate EOW Report",
     regenerateLabel: "Regenerate",
-    generatingLabel: "Wrapping up…",
-    errorNoun: "EOD summary",
+    generatingLabel: "Compiling…",
+    errorNoun: "EOW report",
     emptyText: (scopeText) =>
-      `Get an end-of-day recap of ${scopeText} activity today — what got done, what's still open, and tomorrow's priority.`,
+      `Get an accountability-focused end-of-week report for ${scopeText} — what's done, what's carried over (and for how long), and this week's priorities.`,
   },
 };
 
@@ -493,7 +459,7 @@ async function resetReportPanel(scopeLabel) {
  * destination in every modern browser, so this needs no PDF library. */
 function saveReportAsPdf() {
   const scopeLabel = currentScope === "total" ? "Total" : (currentData.perSheet[currentScope] || {}).name || currentScope;
-  const modeLabel = { summary: "Summary", plan: "Weekly Plan", eod: "End of Day" }[currentReportMode] || "Report";
+  const modeLabel = { summary: "Summary", plan: "Weekly Plan", eow: "End of Week" }[currentReportMode] || "Report";
   // Prefer the actual date(s) the report's data covers over when it happened
   // to be generated — a report can be regenerated well after the week/day it
   // describes, so "generated at" is misleading as the headline date.
@@ -566,15 +532,11 @@ function saveReportAsPdf() {
   p { margin: 0 0 12px; }
   strong { color: #000; }
 
-  .report-team { padding-left: 14px; border-left: 3px solid #e1e0d9; }
-  .report-team + .report-team { margin-top: 20px; padding-top: 18px; border-top: 1px solid #e1e0d9; }
-  .report-team:nth-of-type(6n+1) { border-left-color: #2a78d6; }
-  .report-team:nth-of-type(6n+2) { border-left-color: #4a3aa7; }
-  .report-team:nth-of-type(6n+3) { border-left-color: #0ca30c; }
-  .report-team:nth-of-type(6n+4) { border-left-color: #fab219; }
-  .report-team:nth-of-type(6n+5) { border-left-color: #ec835a; }
-  .report-team:nth-of-type(6n)   { border-left-color: #d03b3b; }
-  .report-team h2 { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #111; margin: 0 0 8px; }
+  /* One neutral rule rather than six order-assigned status hues — same
+     reasoning as the on-screen panel (see .report-team in styles.css). */
+  .report-team { padding-left: 16px; border-left: 2px solid #d8dbdf; }
+  .report-team + .report-team { margin-top: 24px; padding-top: 20px; border-top: 1px solid #e6e8eb; }
+  .report-team h2 { font-size: 15px; font-weight: 700; letter-spacing: 0; color: #0b0d10; margin: 0 0 10px; }
 
   .status-word { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.6; white-space: nowrap; }
   .status-word-pending { background: rgba(42,120,214,0.16); color: #2a78d6; }
@@ -589,9 +551,34 @@ function saveReportAsPdf() {
 
   .report-not-updated { color: #898781; font-style: italic; }
 
+  a { color: #2a78d6; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* table-layout: fixed + word-wrap is load-bearing: without it, the
+     "Top flag" / "Blocker" columns' long AI-written sentences push the
+     table wider than the page, and the overflow gets silently clipped at
+     the page edge instead of wrapping (this is what produced a report
+     that looked cut off on the right in testing). Fixed layout forces
+     every column to share the page width and wrap instead. */
+  table.report-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin: 14px 0 20px; font-size: 12.5px; }
+  table.report-table th, table.report-table td { border: 1px solid #e1e0d9; padding: 7px 10px; text-align: left; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; }
+  table.report-table th { background: #f3f2ef; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.02em; color: #52514e; }
+  table.report-table tr:nth-child(even) td { background: #fafaf8; }
+  /* Count columns are tagged .num by renderMarkdownLite so digits line up
+     down the column in print too, not just on screen. */
+  table.report-table th.num, table.report-table td.num { text-align: right; }
+  table.report-table td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .report-ranked-item { margin: 0 0 6px; padding-left: 4px; }
+  .report-aside { color: #898781; font-style: italic; margin: 8px 0 0; }
+
   @media print {
     html, body { background: #fff; margin: 0; }
     .doc-card { border-radius: 0; border: none; padding: 0; }
+    .report-team { page-break-before: auto; }
+    .report-team h2 { page-break-after: avoid; }
+    table.report-table thead { display: table-header-group; }
+    table.report-table tr { page-break-inside: avoid; break-inside: avoid; }
   }
 </style>
 </head><body>
@@ -647,11 +634,25 @@ function highlightStatusWords(html) {
  * report-specific line shapes for prettier styling: the per-team "Overall"
  * wrap-up bullet, the closing "Focus this week:" / "Tomorrow's priority:"
  * callout, and a bare "Not updated" line for teams with no source data. */
+// GFM-pipe-style row: | cell | cell |. \| inside a cell escapes the
+// delimiter — the only special character eowReport.js's mdTable() escapes
+// when building these, so this is the only case that needs unescaping back.
+function parseTableRow(line) {
+  const trimmed = line.trim().replace(/^\|/, "").replace(/\|$/, "");
+  return trimmed.split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\\|/g, "|"));
+}
+// The "| --- | --- |" divider row between a table's header and body —
+// content-free, never rendered, just marks where the header ends.
+function isTableSeparatorRow(line) {
+  return /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?$/.test(line.trim());
+}
+
 function renderMarkdownLite(text) {
   const lines = text.split("\n");
   let html = "";
   let inList = false;
   let inTeam = false;
+  let tableRows = []; // rows collected for a table currently being read, header first
 
   const closeList = () => {
     if (inList) {
@@ -665,18 +666,59 @@ function renderMarkdownLite(text) {
       inTeam = false;
     }
   };
-  const inline = (s) => highlightStatusWords(s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>"));
+  // [text](#anchor) — currently only used for department names (see
+  // deptLink() in eowReport.js) so a click jumps to that department's own
+  // "## NAME: {#dept-key}" heading further down the same report, in both
+  // the on-page panel and the exported PDF (same HTML, copied verbatim).
+  const inline = (s) =>
+    highlightStatusWords(
+      s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>').replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    );
+  // A cell is "numeric" if every body row under that column is a bare count,
+  // an em-dash placeholder, or a weeks-pending reading like "13 (2026-06-15
+  // → 2026-09-20)". Those columns get right-aligned tabular figures so the
+  // counts can actually be compared down the column; prose columns don't.
+  const isNumericCell = (c) => /^(—|-|\d[\d,]*%?(\s*\(.*\))?)$/.test(c.trim());
+  const flushTable = () => {
+    if (tableRows.length === 0) return;
+    const [headerRow, ...bodyRows] = tableRows;
+    const numericCols = headerRow.map(
+      (_, i) => bodyRows.length > 0 && bodyRows.every((r) => r[i] === undefined || isNumericCell(r[i]))
+    );
+    const cls = (i) => (numericCols[i] ? ' class="num"' : "");
+    // Wrapped so a 6-column table scrolls sideways on a phone instead of
+    // squeezing prose columns down to one word per line.
+    html += `<div class="table-scroll"><table class="data-table report-table"><thead><tr>${headerRow
+      .map((h, i) => `<th${cls(i)}>${inline(h)}</th>`)
+      .join("")}</tr></thead><tbody>${bodyRows
+      .map((row) => `<tr>${row.map((c, i) => `<td${cls(i)}>${inline(c)}</td>`).join("")}</tr>`)
+      .join("")}</tbody></table></div>`;
+    tableRows = [];
+  };
 
   for (const raw of lines) {
     const line = raw.trim();
     if (!line) {
       closeList();
+      flushTable();
       continue;
     }
+    if (line.startsWith("|")) {
+      if (!isTableSeparatorRow(line)) tableRows.push(parseTableRow(line));
+      continue;
+    }
+    flushTable();
     if (line.startsWith("## ")) {
       closeList();
       closeTeam();
-      html += `<div class="report-team"><h2>${inline(line.slice(3))}</h2>`;
+      // Trailing "{#anchor}" (kramdown-style heading-id syntax) becomes the
+      // div's id, so [text](#anchor) links elsewhere in the report can jump
+      // straight to it — see deptLink()/`{#dept-<key>}` in eowReport.js.
+      const heading = line.slice(3);
+      const anchorMatch = heading.match(/\s*\{#([a-zA-Z0-9_-]+)\}\s*$/);
+      const idAttr = anchorMatch ? ` id="${anchorMatch[1]}"` : "";
+      const headingText = anchorMatch ? heading.slice(0, anchorMatch.index) : heading;
+      html += `<div class="report-team"${idAttr}><h2>${inline(headingText)}</h2>`;
       inTeam = true;
     } else if (line.startsWith("- ") || line.startsWith("* ")) {
       if (!inList) {
@@ -686,6 +728,12 @@ function renderMarkdownLite(text) {
       const itemText = line.slice(2).trim();
       const cls = /^overall\b/i.test(itemText) ? ' class="report-overall"' : "";
       html += `<li${cls}>${inline(itemText)}</li>`;
+    } else if (/^\d+\.\s/.test(line)) {
+      // Ranked list ("1. ", "2. ", ...) — used by the EOW report's
+      // priorities list, kept visually distinct from the "- " bullets.
+      closeList();
+      const itemText = line.replace(/^\d+\.\s*/, "");
+      html += `<p class="report-ranked-item">${inline(itemText)}</p>`;
     } else if (REPORT_CALLOUT_PREFIXES.some((p) => line.startsWith(p))) {
       closeList();
       closeTeam(); // the closing callout sits below every team's section, not inside one
@@ -693,12 +741,18 @@ function renderMarkdownLite(text) {
     } else if (/^not updated\.?$/i.test(line)) {
       closeList();
       html += `<p class="report-not-updated">${inline(line)}</p>`;
+    } else if (/^_.*_$/.test(line)) {
+      // _italic aside_ — used by the EOW report for "nothing to show" notes
+      // in place of an empty table.
+      closeList();
+      html += `<p class="report-aside">${inline(line.slice(1, -1))}</p>`;
     } else {
       closeList();
       html += `<p>${inline(line)}</p>`;
     }
   }
   closeList();
+  flushTable();
   closeTeam();
   return html;
 }
@@ -716,13 +770,9 @@ async function generateReport() {
   body.innerHTML = `<p class="report-loading">Asking Gemini to put together the ${meta.errorNoun}…</p>`;
   try {
     let url = `/api/report?scope=${encodeURIComponent(currentScope)}&type=${encodeURIComponent(currentReportMode)}`;
-    if (currentReportMode === "summary") {
+    if (currentReportMode === "summary" || currentReportMode === "eow") {
       const week = document.getElementById("reportWeekSelect").value;
       if (week) url += `&week=${encodeURIComponent(week)}`;
-    }
-    if (currentReportMode === "eod") {
-      const day = document.getElementById("reportDaySelect").value;
-      if (day) url += `&day=${encodeURIComponent(day)}`;
     }
     const res = await fetch(url, { method: "POST" });
     const json = await res.json();
@@ -755,6 +805,11 @@ function renderStatTiles(view) {
     const tile = document.createElement("div");
     tile.className = "stat-tile" + (isActive ? " active-filter" : "");
     tile.style.setProperty("--tile-accent", STATUS_COLOR[status]);
+    // Drives the width of the tile's accent rule (see .stat-tile::before), so
+    // the five rules together read as a stacked bar of the whole portfolio.
+    // Floored at 2% so a status that exists but is tiny still shows a mark.
+    const share = view.taskCount ? (total / view.taskCount) * 100 : 0;
+    tile.style.setProperty("--share", total === 0 ? "0%" : `${Math.max(share, 2)}%`);
     tile.setAttribute("role", "button");
     tile.tabIndex = 0;
     tile.setAttribute("aria-pressed", String(isActive));
@@ -793,7 +848,14 @@ function toggleStatTileFilter(status) {
 function deltaSub(view, status) {
   const series = view.series;
   const periodWord = currentGranularity === "daily" ? "day" : "week";
-  if (series.length < 2) return `${view.taskCount} tasks total`;
+  // With only one period there's no prior to compare against, so show this
+  // status's share of the total instead — the old fallback printed the same
+  // "N tasks total" on all five tiles, which told you nothing per-tile.
+  if (series.length < 2) {
+    const total = view.totals[status] || 0;
+    if (!view.taskCount) return "no tasks";
+    return `${Math.round((total / view.taskCount) * 100)}% of ${view.taskCount}`;
+  }
   const last = series[series.length - 1][status] || 0;
   const prev = series[series.length - 2][status] || 0;
   if (prev === 0 && last === 0) return `no change this ${periodWord}`;
@@ -843,12 +905,107 @@ function renderLegend(data) {
   ).join("");
 }
 
+/** One period has no trend to show — the only question it can answer is what
+ * that period is made of. A vertical bar chart answers it badly: the single
+ * column sits marooned in a wide plot, the y-axis rounds up past the value
+ * (119 became a 0–200 scale, so the bar reached 60% height), and small
+ * statuses collapse into unreadable slivers. A full-width composition bar
+ * answers the same question with every segment legible and no dead space. */
+function renderCompositionBar(svg, period, width, height) {
+  const marginX = 2;
+  const total = STATUS_ORDER.reduce((sum, s) => sum + (period[s] || 0), 0);
+  if (total === 0) {
+    const text = svgEl("text", { x: width / 2, y: height / 2, "text-anchor": "middle", class: "axis-label" });
+    text.textContent = "No dated tasks in this period";
+    svg.appendChild(text);
+    return;
+  }
+
+  const barH = 58;
+  const barY = 46;
+  const barW = width - marginX * 2;
+  const radius = 10;
+  const gap = 2;
+
+  const caption = svgEl("text", { x: marginX, y: 22, class: "comp-total" });
+  caption.textContent = fmt(total);
+  svg.appendChild(caption);
+
+  const sub = svgEl("text", { x: marginX + String(total).length * 13 + 8, y: 22, class: "axis-label" });
+  sub.textContent = `tasks · ${period.label}`;
+  svg.appendChild(sub);
+
+  // Rounded ends without rounding every internal segment: clip the whole
+  // run of square segments to one rounded rect.
+  const clipId = "compClip";
+  const defs = svgEl("defs", {});
+  const clip = svgEl("clipPath", { id: clipId });
+  clip.appendChild(svgEl("rect", { x: marginX, y: barY, width: barW, height: barH, rx: radius }));
+  defs.appendChild(clip);
+  svg.appendChild(defs);
+
+  const group = svgEl("g", { "clip-path": `url(#${clipId})`, class: "comp-bar" });
+  let x = marginX;
+  STATUS_ORDER.forEach((status) => {
+    const val = period[status] || 0;
+    if (val <= 0) return;
+    const segW = (val / total) * barW;
+    const rect = svgEl("rect", {
+      x,
+      y: barY,
+      width: Math.max(0, segW - gap),
+      height: barH,
+      fill: `url(#${STATUS_GRADIENT_ID[status]})`,
+      class: "comp-seg",
+    });
+    rect.dataset.status = status;
+    rect.addEventListener("mousemove", (e) => showTooltip(e, period));
+    rect.addEventListener("mouseleave", hideTooltip);
+    group.appendChild(rect);
+
+    // The count rides inside its own segment when there's room for it —
+    // dark ink, which clears 4.5:1 on all five status fills.
+    if (segW > 38) {
+      const label = svgEl("text", {
+        x: x + (segW - gap) / 2,
+        y: barY + barH / 2 + 5,
+        "text-anchor": "middle",
+        class: "comp-seg-label",
+      });
+      label.textContent = fmt(val);
+      group.appendChild(label);
+    }
+    x += segW;
+  });
+  svg.appendChild(group);
+
+  // Share of total under each segment wide enough to caption, so the bar
+  // reads as proportions and not just coloured lengths.
+  let lx = marginX;
+  STATUS_ORDER.forEach((status) => {
+    const val = period[status] || 0;
+    if (val <= 0) return;
+    const segW = (val / total) * barW;
+    if (segW > 64) {
+      const pct = svgEl("text", {
+        x: lx + (segW - gap) / 2,
+        y: barY + barH + 18,
+        "text-anchor": "middle",
+        class: "axis-label",
+      });
+      pct.textContent = `${Math.round((val / total) * 100)}%`;
+      svg.appendChild(pct);
+    }
+    lx += segW;
+  });
+}
+
 function renderSeriesChart(series) {
   const svg = document.getElementById("weeklyChart");
   const width = svg.parentElement.clientWidth || 800;
   // A wall-to-wall 280px chart around one lonely bar reads as broken, not
   // minimal — scale the canvas down when there's little to show.
-  const height = series.length === 0 ? 160 : series.length <= 1 ? 190 : series.length <= 3 ? 230 : 280;
+  const height = series.length === 0 ? 160 : series.length <= 1 ? 140 : series.length <= 3 ? 230 : 280;
   const marginLeft = 40;
   const marginBottom = 28;
   const marginTop = 28;
@@ -870,13 +1027,18 @@ function renderSeriesChart(series) {
     return;
   }
 
+  if (series.length === 1) {
+    renderCompositionBar(svg, series[0], width, height);
+    return;
+  }
+
   const fullPlotW = width - marginLeft - marginRight;
   const plotH = height - marginTop - marginBottom;
   // A handful of bars stretched across the full container width reads as
   // broken, not minimal — each bar ends up marooned in its own acre of
   // whitespace. Cap how wide a band is allowed to get, and center the
   // resulting (narrower) cluster of bars in the available space instead.
-  const maxBandW = 110;
+  const maxBandW = series.length <= 3 ? 170 : 110;
   const plotW = Math.min(fullPlotW, series.length * maxBandW);
   const plotOffsetX = marginLeft + (fullPlotW - plotW) / 2;
 
@@ -890,21 +1052,25 @@ function renderSeriesChart(series) {
   );
   const niceMax = niceCeil(maxTotal);
 
-  // gridlines + y ticks (0, mid, max)
+  // gridlines + y ticks (0, mid, max). These span the full plot area, not
+  // just the (possibly much narrower) centered bar cluster — a week-view
+  // with one bar was drawing 110px of gridline marooned in the middle of a
+  // 1000px panel, which read as a broken chart rather than a sparse one.
+  // The bars stay clustered and centered; only the axis runs the full width.
   const ticks = [0, niceMax / 2, niceMax];
   for (const t of ticks) {
     const y = marginTop + plotH - (t / niceMax) * plotH;
     svg.appendChild(
       svgEl("line", {
-        x1: plotOffsetX,
-        x2: plotOffsetX + plotW,
+        x1: marginLeft,
+        x2: width - marginRight,
         y1: y,
         y2: y,
         class: t === 0 ? "baseline" : "gridline",
       })
     );
     const label = svgEl("text", {
-      x: plotOffsetX - 8,
+      x: marginLeft - 8,
       y: y + 4,
       "text-anchor": "end",
       class: "axis-label",
@@ -914,7 +1080,9 @@ function renderSeriesChart(series) {
   }
 
   const bandW = plotW / series.length;
-  const barW = Math.min(32, bandW * 0.5);
+  // Sparse series get chunkier bars — a 32px bar under a full-width axis
+  // looks like a stray tick rather than the subject of the chart.
+  const barW = Math.min(series.length <= 3 ? 68 : 32, bandW * 0.5);
   const gap = 2;
   // With many bars (dense daily views), a label on every one overlaps its
   // neighbors — thin them out so only every Nth bar is labeled, based on how
@@ -995,7 +1163,10 @@ function shortAxisLabel(label) {
 function niceCeil(n) {
   if (n <= 5) return 5;
   const pow = Math.pow(10, Math.floor(Math.log10(n)));
-  const steps = [1, 2, 2.5, 5, 10];
+  // Finer steps than [1, 2, 2.5, 5, 10]: that jumped 119 straight to 200, so
+  // the tallest bar in the chart only ever reached 60% of the plot height
+  // and every column looked stunted. 119 now tops out at 120.
+  const steps = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
   for (const s of steps) {
     if (n <= s * pow) return s * pow;
   }
@@ -1433,8 +1604,7 @@ document.querySelectorAll("#reportModeToggle .seg-btn").forEach((btn) => {
     if (m === currentReportMode || !currentData) return;
     currentReportMode = m;
     document.querySelectorAll("#reportModeToggle .seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
-    document.getElementById("reportWeekSelect").hidden = m !== "summary";
-    document.getElementById("reportDaySelect").hidden = m !== "eod";
+    document.getElementById("reportWeekSelect").hidden = m === "plan";
     const scopeLabel = currentScope === "total" ? "Total" : currentData.perSheet[currentScope].name;
     resetReportPanel(scopeLabel);
   });
@@ -1444,10 +1614,10 @@ document.querySelectorAll("#reportModeToggle .seg-btn").forEach((btn) => {
 // opens WhatsApp with the message pre-filled; the person still hits Send
 // themselves inside WhatsApp. No account, no API key, no backend. ) ----
 const REMINDER_META = {
-  eod: {
-    heading: "Send EOD Update Reminder",
+  eow: {
+    heading: "Send EOW Update Reminder",
     message: (scopeName) =>
-      `Reminder: please update today's EOD status for *${scopeName}* in the Task Tracker — log what got done today and update task notes.`,
+      `Reminder: please update this week's status for *${scopeName}* in the Task Tracker — log what got done, and update notes on anything still open so it doesn't read as untouched.`,
   },
   plan: {
     heading: "Send Weekly Plan Reminder",
@@ -1636,6 +1806,31 @@ document.getElementById("liveToggle").addEventListener("click", () => {
   else stopLivePolling();
 });
 startLivePolling();
+
+// Theme is a three-state idea stored as two: no saved value means "follow
+// the OS" (the initial state, applied by the inline script in index.html),
+// and clicking pins an explicit choice from then on. The chart re-renders
+// because its fills and label colours are resolved from CSS variables at
+// draw time, not live-bound like the DOM is.
+function currentTheme() {
+  const pinned = document.documentElement.getAttribute("data-theme");
+  if (pinned === "light" || pinned === "dark") return pinned;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+document.getElementById("themeToggle").addEventListener("click", () => {
+  const next = currentTheme() === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try {
+    localStorage.setItem("theme", next);
+  } catch (e) {
+    // Private mode / blocked storage: the theme still applies for this
+    // session, it just won't be remembered on the next load.
+  }
+  const btn = document.getElementById("themeToggle");
+  btn.title = next === "dark" ? "Switch to light theme" : "Switch to dark theme";
+  if (currentData) renderSeriesChart(scopedView(currentData).series);
+});
 
 window.addEventListener("resize", () => {
   if (currentData) renderSeriesChart(scopedView(currentData).series);

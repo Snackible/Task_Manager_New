@@ -1,26 +1,37 @@
 /* Palette + tokens, per the dataviz reference palette (references/palette.md).
    Declared on :root (not .viz-root) so body's own background/color — which
-   sit ABOVE .viz-root in the tree — can resolve the variables too. */
+   sit ABOVE .viz-root in the tree — can resolve the variables too.
+
+   Chrome here is deliberately desaturated: the status hues below are the
+   only saturated colour on the page, so a red tile or an amber bar reads as
+   a signal rather than as one more decorative accent competing with a
+   gradient. Anything that isn't encoding a status is slate, ink, or rule. */
 :root {
   color-scheme: light;
-  --surface-1:      #fcfcfb;
-  --surface-2:      #f3f2ef;
-  --page-plane:     #f9f9f7;
-  --text-primary:   #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted:     #898781;
-  --gridline:       #e1e0d9;
-  --baseline:       #c3c2b7;
-  --border:         rgba(11,11,11,0.09);
-  --shadow:         0 1px 2px rgba(11,11,11,0.04), 0 10px 28px rgba(11,11,11,0.05), inset 0 1px 0 rgba(255,255,255,0.7);
-  --shadow-hover:   0 2px 5px rgba(11,11,11,0.07), 0 16px 36px rgba(11,11,11,0.09), inset 0 1px 0 rgba(255,255,255,0.7);
-  --glow-bg-1:      rgba(42,120,214,0.07);
-  --glow-bg-2:      rgba(74,58,167,0.05);
-  --chip-tint-1:    rgba(42,120,214,0.14);
-  --chip-tint-2:    rgba(74,58,167,0.14);
+  --font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body:    system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Every count, date, week-tally and delta is set in this. They're readings
+     off an instrument, and tabular figures keep columns of them aligned. */
+  --font-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --surface-1:      #ffffff;
+  --surface-2:      #eef0f3;
+  --page-plane:     #f7f8f9;
+  --text-primary:   #0b0d10;
+  --text-secondary: #4a5058;
+  --text-muted:     #858b94;
+  --gridline:       #e2e5e9;
+  --baseline:       #c2c7ce;
+  --border:         rgba(11,13,16,0.10);
+  --rule:           rgba(11,13,16,0.07);
+  --shadow:         0 1px 2px rgba(11,13,16,0.05), 0 8px 24px -16px rgba(11,13,16,0.18);
+  --shadow-hover:   0 1px 2px rgba(11,13,16,0.06), 0 16px 36px -18px rgba(11,13,16,0.22);
+  --chip-tint-1:    rgba(42,120,214,0.12);
+  --chip-tint-2:    rgba(74,58,167,0.12);
   --ease:           cubic-bezier(0.16, 1, 0.3, 1);
-  --panel-bg:       rgba(252,252,251,0.72);
-  --glow-accent:    rgba(42,120,214,0.38);
+  --panel-bg:       #ffffff;
+  --panel-raised:   #f2f4f6;
+  --glow-accent:    rgba(42,120,214,0.30);
 
   --status-pending:            #2a78d6; /* categorical blue: not yet started */
   --status-awaiting-approval:  #0f9488; /* categorical teal: done, waiting on someone else's sign-off */
@@ -30,63 +41,90 @@
   --status-overdue:      #d03b3b; /* mode-invariant: status "critical" — incomplete work past its deadline */
   --accent-violet:       #4a3aa7; /* categorical slot 7, reused only for UI chrome (the AI button gradient), never as a data mark */
 }
+/* Dark is the mode this actually ships in. Slate rather than pure black:
+   #0b0d10 page / #14171c panel / #1b1f26 raised gives three legible
+   elevation steps without a single shadow, which is what lets the panels be
+   flat and hairline-ruled instead of floating glass. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --surface-1:      #18181a;
-    --surface-2:      #212123;
-    --page-plane:     #0a0a0b;
-    --text-primary:   #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted:     #8b8a88;
-    --gridline:       #2a2a2c;
-    --baseline:       #3a3a3d;
+    --surface-1:      #1b1f26;
+    --surface-2:      #22262e;
+    --page-plane:     #0b0d10;
+    --text-primary:   #f2f4f7;
+    --text-secondary: #a8b0ba;
+    --text-muted:     #6f7783;
+    --gridline:       #252a32;
+    --baseline:       #363c46;
     --border:         rgba(255,255,255,0.09);
-    --shadow:         0 1px 2px rgba(0,0,0,0.3), 0 10px 28px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
-    --shadow-hover:   0 2px 5px rgba(0,0,0,0.35), 0 20px 44px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07);
-    --glow-bg-1:      rgba(57,135,229,0.14);
-    --glow-bg-2:      rgba(144,133,233,0.08);
+    --rule:           rgba(255,255,255,0.06);
+    --shadow:         0 1px 2px rgba(0,0,0,0.4), 0 12px 32px -20px rgba(0,0,0,0.8);
+    --shadow-hover:   0 1px 2px rgba(0,0,0,0.45), 0 20px 44px -20px rgba(0,0,0,0.9);
     --chip-tint-1:    rgba(57,135,229,0.18);
     --chip-tint-2:    rgba(144,133,233,0.16);
-    --panel-bg:       rgba(24,24,26,0.6);
+    --panel-bg:       #14171c;
+    --panel-raised:   #1b1f26;
     --glow-accent:    rgba(57,135,229,0.45);
 
     --status-pending:            #3987e5;
     --status-awaiting-approval:  #2dd4bf;
     --status-in-progress:        #fab219;
-    --status-completed:          #0ca30c;
+    --status-completed:          #22b422;
     --accent-violet:       #9085e9;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --surface-1:      #18181a;
-  --surface-2:      #212123;
-  --page-plane:     #0a0a0b;
-  --text-primary:   #ffffff;
-  --text-secondary: #c3c2b7;
-  --text-muted:     #8b8a88;
-  --gridline:       #2a2a2c;
-  --baseline:       #3a3a3d;
+  --surface-1:      #1b1f26;
+  --surface-2:      #22262e;
+  --page-plane:     #0b0d10;
+  --text-primary:   #f2f4f7;
+  --text-secondary: #a8b0ba;
+  --text-muted:     #6f7783;
+  --gridline:       #252a32;
+  --baseline:       #363c46;
   --border:         rgba(255,255,255,0.09);
-  --shadow:         0 1px 2px rgba(0,0,0,0.3), 0 10px 28px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
-  --shadow-hover:   0 2px 5px rgba(0,0,0,0.35), 0 20px 44px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07);
-  --glow-bg-1:      rgba(57,135,229,0.14);
-  --glow-bg-2:      rgba(144,133,233,0.08);
+  --rule:           rgba(255,255,255,0.06);
+  --shadow:         0 1px 2px rgba(0,0,0,0.4), 0 12px 32px -20px rgba(0,0,0,0.8);
+  --shadow-hover:   0 1px 2px rgba(0,0,0,0.45), 0 20px 44px -20px rgba(0,0,0,0.9);
   --chip-tint-1:    rgba(57,135,229,0.18);
   --chip-tint-2:    rgba(144,133,233,0.16);
-  --panel-bg:       rgba(24,24,26,0.6);
+  --panel-bg:       #14171c;
+  --panel-raised:   #1b1f26;
   --glow-accent:    rgba(57,135,229,0.45);
 
-  --status-pending:      #3987e5;
-  --status-in-progress:  #fab219;
-  --status-completed:    #0ca30c;
+  --status-pending:            #3987e5;
+  --status-awaiting-approval:  #2dd4bf;
+  --status-in-progress:        #fab219;
+  --status-completed:          #22b422;
   --accent-violet:       #9085e9;
 }
 
 * { box-sizing: border-box; }
 
 ::selection { background: var(--status-pending); color: #fff; }
+
+/* One focus ring for every interactive control. Buttons, tabs, segmented
+   toggles and links previously had none, so keyboard users had no idea
+   where they were on a page that's almost entirely buttons. */
+:where(button, a, select, input, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--status-pending);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* So a department-name click in the EOW report (see .report-body a above)
+   glides to its section instead of jumping instantly. */
+html { scroll-behavior: smooth; }
 
 * { scrollbar-width: thin; scrollbar-color: var(--baseline) transparent; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -101,22 +139,26 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--page-plane);
+  /* A 64px ruled grid instead of the usual radial colour blobs — it reads as
+     graph paper under an instrument, costs no hue, and gives the flat panels
+     something to sit on so they don't float in void. */
   background-image:
-    radial-gradient(1100px circle at 12% -12%, var(--glow-bg-1), transparent 55%),
-    radial-gradient(900px circle at 105% 0%, var(--glow-bg-2), transparent 50%),
-    radial-gradient(700px circle at 50% 115%, var(--glow-bg-1), transparent 60%);
+    linear-gradient(var(--rule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+  background-size: 64px 64px, 64px 64px;
+  background-position: -1px -1px;
   background-attachment: fixed;
   color: var(--text-primary);
 }
 
 .viz-root {
-  max-width: 1120px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 40px 20px 72px;
+  padding: 36px 24px 80px;
 }
 
 .page-header {
@@ -151,14 +193,12 @@ body {
 .brand-mark span:nth-child(2) { height: 70%; background: var(--status-in-progress); }
 .brand-mark span:nth-child(3) { height: 100%; background: var(--status-completed); }
 .page-header h1 {
-  font-size: 27px;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 25px;
+  font-weight: 600;
   letter-spacing: -0.02em;
-  margin: 0 0 4px;
-  background: linear-gradient(100deg, var(--text-primary) 55%, var(--status-pending) 115%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  margin: 0;
+  color: var(--text-primary);
 }
 .subtitle {
   margin: 0;
@@ -214,28 +254,44 @@ body {
   flex-shrink: 0;
   white-space: nowrap;
   gap: 7px;
-  font: inherit;
+  font-family: var(--font-display);
   font-size: 13px;
-  font-weight: 600;
-  padding: 9px 16px;
-  border-radius: 999px;
+  font-weight: 500;
+  padding: 8px 15px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface-1);
   color: var(--text-primary);
   cursor: pointer;
-  transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease),
-    transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+  transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease);
 }
-.btn:hover { background: var(--surface-2); transform: translateY(-1px); box-shadow: var(--shadow); }
-.btn:active { transform: translateY(0) scale(0.97); }
-.btn:disabled { cursor: default; opacity: 0.6; transform: none; }
+.btn:hover { background: var(--surface-2); border-color: var(--baseline); }
+.btn:active { background: var(--panel-raised); }
+.btn:disabled { cursor: default; opacity: 0.55; }
 .btn-icon { width: 14px; height: 14px; flex: none; }
 .btn-icon-only {
-  padding: 9px;
-  width: 34px;
-  height: 34px;
+  padding: 8px;
+  width: 33px;
+  height: 33px;
   justify-content: center;
+  color: var(--text-secondary);
 }
+.btn-icon-only:hover { color: var(--text-primary); }
+
+/* The toggle shows the theme you'd switch TO, not the one you're in: a sun
+   while dark, a moon while light. Driven entirely off the same cascade the
+   palette uses, so it stays correct whether the theme came from the OS or
+   from an explicit data-theme the user picked. */
+.theme-toggle .icon-sun { display: none; }
+.theme-toggle .icon-moon { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-toggle .icon-sun { display: block; }
+  :root:not([data-theme="light"]) .theme-toggle .icon-moon { display: none; }
+}
+:root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+:root[data-theme="light"] .theme-toggle .icon-sun { display: none; }
+:root[data-theme="light"] .theme-toggle .icon-moon { display: block; }
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;
@@ -293,37 +349,29 @@ body {
   font-weight: 600;
 }
 
+/* Solid violet, not a gradient with a shimmer sweep. Violet is the one hue
+   in the palette reserved for chrome and never used as a data mark, so the
+   page's primary action stays unmistakable without borrowing a status
+   colour or adding a second decorative gradient next to the stat strip. */
 .btn-ai {
-  position: relative;
-  overflow: hidden;
-  border: none;
+  border: 1px solid transparent;
   color: #ffffff;
-  background: linear-gradient(135deg, var(--status-pending), var(--accent-violet));
-  box-shadow: 0 1px 2px rgba(11,11,11,0.1), 0 8px 20px -4px rgba(42,120,214,0.45);
+  background: var(--accent-violet);
+  font-weight: 600;
 }
-.btn-ai::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%);
-  transform: translateX(-120%);
-  transition: transform 0.7s var(--ease);
-}
-.btn-ai:hover::after { transform: translateX(120%); }
 .btn-ai:hover {
-  background: linear-gradient(135deg, var(--status-pending), var(--accent-violet));
-  filter: brightness(1.08);
-  box-shadow: 0 1px 2px rgba(11,11,11,0.1), 0 10px 28px -4px rgba(42,120,214,0.6);
+  background: var(--accent-violet);
+  border-color: transparent;
+  filter: brightness(1.12);
 }
-.btn-ai:disabled { filter: none; }
-.btn-ai:disabled::after { display: none; }
+.btn-ai:active { background: var(--accent-violet); filter: brightness(0.94); }
 
 .select-input,
 .text-input {
-  font: inherit;
+  font-family: var(--font-body);
   font-size: 13px;
   color: var(--text-primary);
-  background: var(--surface-2);
+  background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 7px 10px;
@@ -361,37 +409,43 @@ body {
 }
 .link-btn:hover { color: var(--text-primary); }
 
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
 .tab-bar {
   position: relative;
   display: flex;
   gap: 2px;
   padding: 4px;
-  margin-bottom: 24px;
-  background: var(--surface-2);
+  background: var(--panel-bg);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 10px;
   overflow-x: auto;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
+/* Was position:fixed at top-left, which parked it directly on top of the
+   H1 at every scroll position. It's a scope control like the team tabs, so
+   it now sits on the same line as them. */
 .date-range-row {
-  position: fixed;
-  left: 20px;
-  top: 20px;
-  z-index: 50;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  background: var(--panel-bg);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  box-shadow: var(--shadow-hover);
+  gap: 8px;
+  flex: none;
 }
 .date-range-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   color: var(--text-muted);
   white-space: nowrap;
 }
@@ -402,23 +456,23 @@ body {
   bottom: 4px;
   left: 4px;
   width: 0;
-  border-radius: 999px;
-  background: var(--surface-1);
-  box-shadow: var(--shadow), 0 0 16px -4px var(--glow-accent);
+  border-radius: 7px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
   transition: left 0.32s var(--ease), width 0.32s var(--ease);
   pointer-events: none;
 }
 .tab-btn {
   position: relative;
   z-index: 1;
-  font: inherit;
+  font-family: var(--font-display);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-secondary);
   background: transparent;
   border: none;
-  border-radius: 999px;
-  padding: 8px 16px;
+  border-radius: 7px;
+  padding: 8px 15px;
   cursor: pointer;
   white-space: nowrap;
   transition: color 0.2s var(--ease);
@@ -465,115 +519,132 @@ body {
   box-shadow: var(--shadow);
 }
 
+/* The five statuses read as one instrument strip, not five floating cards.
+   Two reasons beyond looks: five equal cards in the old 4-column grid left
+   "Completed" orphaned on a second row next to three empty cells, and the
+   statuses are five parts of one total — parts of a whole belong in one
+   enclosure, divided by rules, rather than in five separate objects. */
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 28px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  margin-bottom: 22px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
 }
 .stat-tile {
   position: relative;
   overflow: hidden;
-  background: var(--panel-bg);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 20px 22px;
-  box-shadow: var(--shadow), 0 16px 32px -22px var(--tile-accent, transparent);
-  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.2s var(--ease);
+  padding: 16px 18px 18px;
+  border-left: 1px solid var(--rule);
+  transition: background-color 0.2s var(--ease);
   cursor: pointer;
 }
+.stat-tile:first-child { border-left: none; }
 .stat-tile:focus-visible {
   outline: 2px solid var(--tile-accent, var(--status-pending));
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
-.stat-tile.active-filter {
-  border-color: var(--tile-accent, var(--border));
-  box-shadow: var(--shadow-hover), 0 0 0 1px var(--tile-accent, transparent), 0 20px 40px -18px var(--tile-accent, transparent);
+.stat-tile.active-filter { background: var(--panel-raised); }
+.stat-tile.active-filter::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--tile-accent, transparent);
+  pointer-events: none;
 }
+/* The accent rule's WIDTH is that status's share of all tasks, so the row of
+   rules across the strip reads as a stacked bar of the whole portfolio —
+   the tally and its proportion in one mark. --share is set per tile in
+   app.js; it falls back to a full-width rule if that ever goes missing. */
 .stat-tile::before {
   content: "";
   position: absolute;
-  top: 0; left: 0; right: 0;
+  top: 0; left: 0;
+  width: var(--share, 100%);
   height: 3px;
   background: var(--tile-accent, var(--text-muted));
-  opacity: 0.9;
-  box-shadow: 0 0 12px 0 var(--tile-accent, transparent);
+  transition: width 0.5s var(--ease);
 }
-.stat-tile:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-hover), 0 20px 40px -18px var(--tile-accent, transparent);
-}
+.stat-tile:hover { background: var(--panel-raised); }
 .stat-tile .label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-  margin-bottom: 14px;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
 }
 .stat-tile .swatch {
-  width: 9px;
-  height: 9px;
-  border-radius: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
   flex: none;
 }
 .stat-tile .value-row {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 .stat-tile .value {
-  font-size: 40px;
-  font-weight: 800;
-  letter-spacing: -0.025em;
+  font-family: var(--font-mono);
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
-.stat-tile .sparkline { flex: none; margin-bottom: 1px; }
+.stat-tile .sparkline { flex: none; margin-bottom: 2px; opacity: 0.75; }
 .stat-tile .sub {
-  margin-top: 10px;
-  font-size: 12px;
+  margin-top: 9px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.delta-arrow { font-weight: 700; }
+.delta-arrow { font-weight: 600; }
 .delta-arrow.good { color: var(--status-completed); }
 .delta-arrow.bad { color: var(--status-serious); }
 .delta-arrow.neutral { color: var(--text-muted); }
 
 .panel {
   background: var(--panel-bg);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
   border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: var(--shadow);
-  transition: box-shadow 0.3s var(--ease), border-color 0.3s var(--ease);
+  border-radius: 12px;
+  padding: 20px 22px 22px;
+  margin-bottom: 16px;
+  transition: border-color 0.3s var(--ease);
 }
-.panel:hover {
-  box-shadow: var(--shadow-hover);
-  border-color: color-mix(in srgb, var(--status-pending) 22%, var(--border));
-}
-.panel-header .source-badge-inline { margin-left: 8px; }
+/* The header rule runs the full panel width (pulled out past the padding),
+   so the title sits on a ledger line rather than floating above content —
+   the same device the report's own tables use. */
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin: 0 -22px 18px;
+  padding: 0 22px 14px;
+  border-bottom: 1px solid var(--rule);
   flex-wrap: wrap;
 }
+.panel-header .source-badge-inline { margin-left: 8px; }
 .panel-header h2 {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.005em;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
   margin: 0;
 }
 .panel-actions {
@@ -587,20 +658,24 @@ body {
 
 .legend {
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
   font-size: 12px;
   color: var(--text-secondary);
+  min-width: 0;
 }
 .legend .item {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--surface-2);
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
   transition: background-color 0.15s var(--ease);
 }
-.legend .item:hover { background: var(--gridline); }
+.legend .item:hover { background: var(--surface-2); }
 .legend .dot {
   width: 8px;
   height: 8px;
@@ -609,7 +684,7 @@ body {
 }
 
 #chartWrap { position: relative; }
-#weeklyChart { width: 100%; height: 280px; display: block; overflow: visible; }
+#weeklyChart { width: 100%; height: 240px; display: block; overflow: visible; }
 
 .bar-seg {
   cursor: pointer;
@@ -627,14 +702,47 @@ body {
 
 .bar-value-label {
   fill: var(--text-primary);
+  font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   animation: fadeIn 0.35s var(--ease) backwards;
 }
 
+/* Single-period composition bar (see renderCompositionBar in app.js). */
+.comp-bar {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: growBarX 0.55s var(--ease) backwards;
+}
+@keyframes growBarX {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.comp-seg {
+  cursor: pointer;
+  transition: filter 0.15s var(--ease);
+}
+.comp-seg:hover { filter: brightness(1.12); }
+.comp-seg-label {
+  fill: #0b0d10;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.comp-total {
+  fill: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 19px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .axis-label {
   fill: var(--text-muted);
+  font-family: var(--font-mono);
   font-size: 11px;
 }
 .gridline { stroke: var(--gridline); stroke-width: 1; }
@@ -666,6 +774,19 @@ body {
 .tooltip .tt-row .dot { width: 8px; height: 8px; border-radius: 2px; flex: none; }
 .tooltip .tt-row .v { font-variant-numeric: tabular-nums; font-weight: 700; }
 
+/* Wide tables scroll sideways rather than crushing their columns. Applies
+   to the panel tables (By team, Tasks, the chart's table view) and to the
+   report's own tables, which get .table-scroll from renderMarkdownLite. */
+.table-scroll,
+#teamTableWrap,
+#taskListWrap,
+#weeklyTableWrap {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.table-scroll { margin: 10px 0 16px; }
+.table-scroll .report-table { margin: 0; min-width: 600px; }
+
 table.data-table {
   width: 100%;
   border-collapse: collapse;
@@ -673,19 +794,26 @@ table.data-table {
 }
 table.data-table th, table.data-table td {
   text-align: left;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--gridline);
-  font-variant-numeric: tabular-nums;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--rule);
 }
 table.data-table th {
-  color: var(--text-secondary);
-  font-weight: 700;
-  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.1em;
+  border-bottom-color: var(--gridline);
 }
-table.data-table td.num { text-align: right; }
-table.data-table th.num { text-align: right; }
+/* Numeric columns get the mono face and tabular figures so digits line up
+   vertically — the whole point of a column of counts is comparing them. */
+table.data-table td.num, table.data-table th.num { text-align: right; }
+table.data-table td.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+}
 table.data-table tbody tr { transition: background-color 0.12s var(--ease); }
 table.data-table tbody tr:hover { background: var(--surface-2); }
 table.data-table tbody tr:last-child td { border-bottom: none; }
@@ -820,26 +948,28 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 30px 20px;
+  gap: 12px;
+  padding: 44px 20px;
   text-align: center;
 }
 .report-empty-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--chip-tint-1), var(--chip-tint-2));
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
   color: var(--accent-violet);
 }
-.report-empty-icon svg { width: 20px; height: 20px; }
+.report-empty-icon svg { width: 18px; height: 18px; }
 .report-empty p {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 13px;
-  max-width: 340px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  max-width: 380px;
 }
 
 .report-body {
@@ -854,6 +984,18 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
 .report-body p { margin: 0 0 12px; }
 .report-body p:last-child { margin-bottom: 0; }
 .report-body strong { color: var(--text-primary); }
+/* Department names in the EOW report's summary tables link to that
+   department's own section below (see deptLink() in eowReport.js) — styled
+   distinctly enough to read as clickable without competing with the
+   report's own accent colors. */
+.report-body a {
+  color: var(--status-pending);
+  text-decoration: none;
+}
+.report-body a:hover { text-decoration: underline; }
+/* Scroll target breathing room so a department heading doesn't land flush
+   against the report panel's own top edge when jumped to via anchor link. */
+.report-body .report-team { scroll-margin-top: 12px; }
 .report-body .report-error {
   color: var(--text-secondary);
   font-size: 13px;
@@ -867,28 +1009,27 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
 /* Each "## TEAMNAME:" section becomes a card with a colored accent border,
  * cycling through the dashboard's existing status/accent palette so a
  * multi-team report reads as color-coded sections rather than a wall of text. */
+/* The left rule is deliberately one neutral colour rather than cycling
+ * through six status hues. The cycle was assigned by section order, so
+ * "R&D is violet" held only until a department was added or reordered —
+ * it looked like an encoding without being one, while spending the hues
+ * that mean overdue / in-progress / completed in the tables right below. */
 .report-team {
-  padding-left: 14px;
-  border-left: 3px solid var(--border);
+  padding-left: 16px;
+  border-left: 2px solid var(--gridline);
 }
 .report-team + .report-team {
-  margin-top: 20px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--rule);
 }
-.report-team:nth-of-type(6n+1) { border-left-color: var(--status-pending); }
-.report-team:nth-of-type(6n+2) { border-left-color: var(--accent-violet); }
-.report-team:nth-of-type(6n+3) { border-left-color: var(--status-completed); }
-.report-team:nth-of-type(6n+4) { border-left-color: var(--status-in-progress); }
-.report-team:nth-of-type(6n+5) { border-left-color: var(--status-serious); }
-.report-team:nth-of-type(6n) { border-left-color: var(--status-overdue); }
 .report-team h2 {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--text-primary);
-  margin: 0 0 8px;
+  margin: 0 0 10px;
 }
 
 /* Inline status keywords the model is instructed to weave into prose (Done,
@@ -950,11 +1091,63 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   font-style: italic;
 }
 
-@media (max-width: 960px) {
-  .stat-row { grid-template-columns: repeat(2, 1fr); }
+/* EOW report tables (Executive Snapshot, Chronic Delay Tracker, each
+   department's Carried Over table) — same look as the dashboard's other
+   data tables, with a bit of breathing room since these sit inside prose. */
+.report-table {
+  margin: 10px 0 16px;
+  width: 100%;
 }
-@media (max-width: 640px) {
+.report-body .report-team .report-table:first-of-type { margin-top: 4px; }
+
+/* EOW's ranked "Priorities for next week" list — a numbered paragraph run
+   rather than the theme-grouped "- " bullets, so it reads as a distinct,
+   ordered list rather than more narrative bullets. */
+.report-ranked-item {
+  margin: 4px 0 4px 4px;
+}
+
+/* EOW's "nothing to show" notes in place of an empty table (e.g. "no
+   chronic delays this week") — same treatment as report-not-updated. */
+.report-aside {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* The strip stays one enclosure at every width — it just wraps to fewer
+   columns, so the rules still read as segments of one readout rather than
+   reverting to a stack of separate cards. Tiles that wrap onto a new row
+   need a top rule, since only the left borders come from the grid flow. */
+@media (max-width: 1080px) {
+  .stat-row { grid-template-columns: repeat(3, 1fr); }
+  .stat-tile:nth-child(3n + 1) { border-left: none; }
+  .stat-tile:nth-child(n + 4) { border-top: 1px solid var(--rule); }
+}
+@media (max-width: 720px) {
+  .stat-row { grid-template-columns: repeat(2, 1fr); }
+  .stat-tile { border-left: none; }
+  .stat-tile:nth-child(even) { border-left: 1px solid var(--rule); }
+  .stat-tile:nth-child(n + 3) { border-top: 1px solid var(--rule); }
+  .stat-tile .value { font-size: 28px; }
+}
+@media (max-width: 420px) {
   .stat-row { grid-template-columns: 1fr; }
+  .stat-tile, .stat-tile:nth-child(even) { border-left: none; }
+  .stat-tile:nth-child(n + 2) { border-top: 1px solid var(--rule); }
+  /* One row per status instead of five stacked blocks — label and share on
+     the left, the count on the right, so all five fit on screen at once
+     and still line up as a column of readings. */
+  .stat-tile {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 3px 14px;
+    padding: 13px 16px;
+  }
+  .stat-tile .label { grid-column: 1; margin-bottom: 0; }
+  .stat-tile .sub { grid-column: 1; margin-top: 0; }
+  .stat-tile .value-row { grid-column: 2; grid-row: 1 / span 2; }
+  .stat-tile .value { font-size: 26px; }
 }
 
 /* ---- Reminders (WhatsApp deep-link) ---- */
@@ -963,77 +1156,36 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   flex-wrap: wrap;
   gap: 12px;
 }
+/* Deliberately uncoloured. These were three tinted, glowing, gradient-
+ * chipped cards in amber / blue / green — but they're three instances of
+ * one action, so the colour coded nothing while spending the exact hues
+ * that mean "in progress", "pending" and "completed" everywhere else on
+ * the page. The icon and label already tell them apart. */
 .btn-reminder {
   flex: 0 1 auto;
   flex-shrink: 0;
   white-space: nowrap;
-  min-width: 220px;
+  min-width: 215px;
   justify-content: flex-start;
-  gap: 13px;
-  padding: 11px 22px 11px 11px;
+  gap: 11px;
+  padding: 9px 18px 9px 9px;
   background: var(--surface-1);
-  transition: background 0.3s var(--ease), border-color 0.3s var(--ease),
-    box-shadow 0.3s var(--ease), transform 0.2s var(--ease);
 }
-.btn-reminder:hover { transform: translateY(-2px); }
 .reminder-icon-chip {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 11px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   flex: none;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
-  transition: transform 0.35s var(--ease);
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  transition: color 0.2s var(--ease);
 }
-.reminder-icon-chip svg { width: 17px; height: 17px; }
-.btn-reminder:hover .reminder-icon-chip { transform: scale(1.12) rotate(-8deg); }
-
-/* Each reminder type gets a permanent (not just hover) tinted background,
- * border, and ambient glow — matching the stat tiles' glow-beneath
- * treatment, so these read as color-coded cards, not plain dark pills. */
-.reminder-eod {
-  border-color: color-mix(in srgb, var(--status-in-progress) 28%, var(--border));
-  background: linear-gradient(140deg, color-mix(in srgb, var(--status-in-progress) 13%, var(--surface-1)), var(--surface-1) 65%);
-  box-shadow: var(--shadow), 0 14px 28px -20px var(--status-in-progress);
-}
-.reminder-eod .reminder-icon-chip {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--status-in-progress) 65%, transparent), color-mix(in srgb, var(--status-in-progress) 25%, transparent));
-  color: color-mix(in srgb, var(--status-in-progress) 40%, white);
-}
-.reminder-eod:hover {
-  border-color: color-mix(in srgb, var(--status-in-progress) 55%, var(--border));
-  box-shadow: var(--shadow-hover), 0 18px 34px -14px var(--status-in-progress);
-}
-
-.reminder-plan {
-  border-color: color-mix(in srgb, var(--status-pending) 28%, var(--border));
-  background: linear-gradient(140deg, color-mix(in srgb, var(--status-pending) 13%, var(--surface-1)), var(--surface-1) 65%);
-  box-shadow: var(--shadow), 0 14px 28px -20px var(--status-pending);
-}
-.reminder-plan .reminder-icon-chip {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--status-pending) 65%, transparent), color-mix(in srgb, var(--status-pending) 25%, transparent));
-  color: color-mix(in srgb, var(--status-pending) 30%, white);
-}
-.reminder-plan:hover {
-  border-color: color-mix(in srgb, var(--status-pending) 55%, var(--border));
-  box-shadow: var(--shadow-hover), 0 18px 34px -14px var(--status-pending);
-}
-
-.reminder-weekcheck {
-  border-color: color-mix(in srgb, var(--status-completed) 28%, var(--border));
-  background: linear-gradient(140deg, color-mix(in srgb, var(--status-completed) 13%, var(--surface-1)), var(--surface-1) 65%);
-  box-shadow: var(--shadow), 0 14px 28px -20px var(--status-completed);
-}
-.reminder-weekcheck .reminder-icon-chip {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--status-completed) 65%, transparent), color-mix(in srgb, var(--status-completed) 25%, transparent));
-  color: color-mix(in srgb, var(--status-completed) 35%, white);
-}
-.reminder-weekcheck:hover {
-  border-color: color-mix(in srgb, var(--status-completed) 55%, var(--border));
-  box-shadow: var(--shadow-hover), 0 18px 34px -14px var(--status-completed);
-}
+.reminder-icon-chip svg { width: 16px; height: 16px; }
+.btn-reminder:hover .reminder-icon-chip { color: var(--text-primary); }
 
 .modal-overlay {
   position: fixed;
