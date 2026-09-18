@@ -1,11 +1,17 @@
+import { gzipSync, gunzipSync } from "node:zlib";
 import { getDb } from "../lib/mongoClient.js";
 
 const COLLECTION = "snapshots";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+function decompress(doc) {
+  return JSON.parse(gunzipSync(doc.data).toString("utf8"));
+}
+
 // One-off manual endpoint for inspecting/backfilling snapshots directly —
 // handy for diagnosing report issues without a local script. Not part of
-// the app's normal flow.
+// the app's normal flow. Reads/writes the same gzip-compressed shape
+// snapshotStore.js uses (see that file for why).
 export default async function handler(req, res) {
   const authHeader = req.headers.authorization;
   const adminSecret = process.env.ADMIN_SEED_SECRET;
@@ -39,12 +45,13 @@ export default async function handler(req, res) {
         res.status(200).json({ exists: false, date });
         return;
       }
+      const sheets = decompress(doc);
 
       const full = req.query && req.query.full === "true";
       if (full) {
         const team = req.query && req.query.team;
         const taskFilter = req.query && req.query.task ? req.query.task.toLowerCase() : null;
-        const teamsToReturn = team ? { [team]: doc.sheets[team] || [] } : doc.sheets;
+        const teamsToReturn = team ? { [team]: sheets[team] || [] } : sheets;
         const rows = {};
         for (const [key, teamRows] of Object.entries(teamsToReturn)) {
           rows[key] = taskFilter
@@ -59,8 +66,9 @@ export default async function handler(req, res) {
         exists: true,
         date,
         createdAt: doc.createdAt,
-        teams: Object.keys(doc.sheets),
-        rowCounts: Object.fromEntries(Object.entries(doc.sheets).map(([k, rows]) => [k, rows.length])),
+        teams: Object.keys(sheets),
+        rowCounts: Object.fromEntries(Object.entries(sheets).map(([k, rows]) => [k, rows.length])),
+        compressedBytes: doc.data.length,
       });
     } catch (err) {
       console.error("[admin-seed-snapshot] check failed:", err);
@@ -105,7 +113,8 @@ export default async function handler(req, res) {
       return;
     }
 
-    await col.updateOne({ _id: date }, { $set: { sheets, createdAt: new Date() } }, { upsert: true });
+    const data = gzipSync(Buffer.from(JSON.stringify(sheets), "utf8"));
+    await col.updateOne({ _id: date }, { $set: { data, createdAt: new Date() } }, { upsert: true });
     res.status(200).json({ ok: true, date, teams: Object.keys(sheets) });
   } catch (err) {
     console.error("[admin-seed-snapshot] failed:", err);
