@@ -39,6 +39,21 @@
   --panel-raised:   #e9ecef;
   --glow-accent:    rgba(42,120,214,0.30);
 
+  /* Large-area fills (chart bars, composition bar) — see the gradient defs
+     in index.html. Deliberately a different, quieter set than the --status-*
+     marks below: five fully-saturated primaries are legible as 8px dots and
+     3px rules, but butted together as big blocks they vibrate against each
+     other and read as a beach ball. These sit at a common saturation and
+     lightness so they harmonise, while staying unmistakably the same five
+     hues. One set serves both themes — they're mid-tones, so they hold 3:1
+     against the light panel and the dark one, and every one clears 4.5:1
+     against the dark ink of the count printed inside it. */
+  --fill-overdue:            #cc6666;
+  --fill-pending:            #4f86cc;
+  --fill-awaiting-approval:  #3fa99e;
+  --fill-in-progress:        #d2a044;
+  --fill-completed:          #57a04e;
+
   --status-pending:            #2a78d6; /* categorical blue: not yet started */
   --status-awaiting-approval:  #0f9488; /* categorical teal: done, waiting on someone else's sign-off */
   --status-in-progress:        #fab219; /* status warning: actively being worked */

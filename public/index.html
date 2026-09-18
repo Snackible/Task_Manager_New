@@ -32,25 +32,27 @@
   </div>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
+      <!-- Bar fills use the quieter --fill-* set, not the --status-* marks:
+           see the note beside those tokens in styles.css. -->
       <linearGradient id="gradOverdue" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" style="stop-color:var(--status-overdue);stop-opacity:1" />
-        <stop offset="100%" style="stop-color:var(--status-overdue);stop-opacity:0.7" />
+        <stop offset="0%" style="stop-color:var(--fill-overdue);stop-opacity:1" />
+        <stop offset="100%" style="stop-color:var(--fill-overdue);stop-opacity:0.82" />
       </linearGradient>
       <linearGradient id="gradPending" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" style="stop-color:var(--status-pending);stop-opacity:1" />
-        <stop offset="100%" style="stop-color:var(--status-pending);stop-opacity:0.7" />
+        <stop offset="0%" style="stop-color:var(--fill-pending);stop-opacity:1" />
+        <stop offset="100%" style="stop-color:var(--fill-pending);stop-opacity:0.82" />
       </linearGradient>
       <linearGradient id="gradAwaitingApproval" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" style="stop-color:var(--status-awaiting-approval);stop-opacity:1" />
-        <stop offset="100%" style="stop-color:var(--status-awaiting-approval);stop-opacity:0.7" />
+        <stop offset="0%" style="stop-color:var(--fill-awaiting-approval);stop-opacity:1" />
+        <stop offset="100%" style="stop-color:var(--fill-awaiting-approval);stop-opacity:0.82" />
       </linearGradient>
       <linearGradient id="gradInProgress" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" style="stop-color:var(--status-in-progress);stop-opacity:1" />
-        <stop offset="100%" style="stop-color:var(--status-in-progress);stop-opacity:0.7" />
+        <stop offset="0%" style="stop-color:var(--fill-in-progress);stop-opacity:1" />
+        <stop offset="100%" style="stop-color:var(--fill-in-progress);stop-opacity:0.82" />
       </linearGradient>
       <linearGradient id="gradCompleted" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" style="stop-color:var(--status-completed);stop-opacity:1" />
-        <stop offset="100%" style="stop-color:var(--status-completed);stop-opacity:0.7" />
+        <stop offset="0%" style="stop-color:var(--fill-completed);stop-opacity:1" />
+        <stop offset="100%" style="stop-color:var(--fill-completed);stop-opacity:0.82" />
       </linearGradient>
     </defs>
   </svg>

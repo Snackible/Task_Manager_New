@@ -921,11 +921,13 @@ function renderCompositionBar(svg, period, width, height) {
     return;
   }
 
-  const barH = 58;
+  const barH = 54;
   const barY = 46;
   const barW = width - marginX * 2;
   const radius = 10;
-  const gap = 2;
+  // Wide enough that adjacent fills read as separate blocks rather than
+  // vibrating against each other where they meet.
+  const gap = 4;
 
   const caption = svgEl("text", { x: marginX, y: 22, class: "comp-total" });
   caption.textContent = fmt(total);
