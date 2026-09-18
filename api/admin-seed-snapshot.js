@@ -5,7 +5,15 @@ const COLLECTION = "snapshots";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function decompress(doc) {
-  return JSON.parse(gunzipSync(doc.data).toString("utf8"));
+  // The driver hands back stored binary as a BSON Binary wrapper, not a
+  // plain Buffer — gunzipSync only accepts the latter. Binary's own
+  // .buffer property is the real, already-a-Buffer payload underneath.
+  const raw = Buffer.isBuffer(doc.data) ? doc.data : doc.data.buffer;
+  return JSON.parse(gunzipSync(raw).toString("utf8"));
+}
+// Binary.length is a method, not a property — plain Buffer.length isn't.
+function byteLength(data) {
+  return Buffer.isBuffer(data) ? data.length : data.length();
 }
 
 // One-off manual endpoint for inspecting/backfilling snapshots directly —
@@ -68,7 +76,7 @@ export default async function handler(req, res) {
         createdAt: doc.createdAt,
         teams: Object.keys(sheets),
         rowCounts: Object.fromEntries(Object.entries(sheets).map(([k, rows]) => [k, rows.length])),
-        compressedBytes: doc.data.length,
+        compressedBytes: byteLength(doc.data),
       });
     } catch (err) {
       console.error("[admin-seed-snapshot] check failed:", err);
