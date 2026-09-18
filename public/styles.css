@@ -14,23 +14,29 @@
      off an instrument, and tabular figures keep columns of them aligned. */
   --font-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --surface-1:      #ffffff;
-  --surface-2:      #eef0f3;
-  --page-plane:     #f7f8f9;
-  --text-primary:   #0b0d10;
-  --text-secondary: #4a5058;
-  --text-muted:     #858b94;
-  --gridline:       #e2e5e9;
-  --baseline:       #c2c7ce;
-  --border:         rgba(11,13,16,0.10);
-  --rule:           rgba(11,13,16,0.07);
-  --shadow:         0 1px 2px rgba(11,13,16,0.05), 0 8px 24px -16px rgba(11,13,16,0.18);
-  --shadow-hover:   0 1px 2px rgba(11,13,16,0.06), 0 16px 36px -18px rgba(11,13,16,0.22);
+  /* Deliberately not white-on-black. Pure #fff panels under near-black ink
+     is the highest-luminance, highest-contrast combination available and it
+     glares on a dashboard someone keeps open all day. The page is a clear
+     soft grey, panels sit just above it, and the ink is dark slate rather
+     than black — still ~14:1 on panel, which is far past AA, just without
+     the glare. */
+  --surface-1:      #f7f8f9;
+  --surface-2:      #e3e6ea;
+  --page-plane:     #e4e7ea;
+  --text-primary:   #1c2128;
+  --text-secondary: #545c66;
+  --text-muted:     #666d77;
+  --gridline:       #d7dbe0;
+  --baseline:       #b7bdc5;
+  --border:         rgba(28,33,40,0.13);
+  --rule:           rgba(28,33,40,0.08);
+  --shadow:         0 1px 2px rgba(28,33,40,0.05), 0 8px 24px -16px rgba(28,33,40,0.16);
+  --shadow-hover:   0 1px 2px rgba(28,33,40,0.06), 0 16px 36px -18px rgba(28,33,40,0.20);
   --chip-tint-1:    rgba(42,120,214,0.12);
   --chip-tint-2:    rgba(74,58,167,0.12);
   --ease:           cubic-bezier(0.16, 1, 0.3, 1);
-  --panel-bg:       #ffffff;
-  --panel-raised:   #f2f4f6;
+  --panel-bg:       #f1f3f5;
+  --panel-raised:   #e9ecef;
   --glow-accent:    rgba(42,120,214,0.30);
 
   --status-pending:            #2a78d6; /* categorical blue: not yet started */
