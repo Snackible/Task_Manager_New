@@ -1,5 +1,10 @@
-const STATUS_ORDER = ["overdue", "pending", "awaiting_approval", "in_progress", "completed"];
+// no_status leads the list — a row with no status text at all hasn't even
+// been categorized yet, which reads as a more basic gap than "pending" (see
+// statusUtils.js: blank used to silently become "pending," which hid that
+// gap entirely).
+const STATUS_ORDER = ["no_status", "overdue", "pending", "awaiting_approval", "in_progress", "completed"];
 const STATUS_COLOR = {
+  no_status: "var(--status-no-status)",
   overdue: "var(--status-overdue)",
   pending: "var(--status-pending)",
   awaiting_approval: "var(--status-awaiting-approval)",
@@ -12,12 +17,45 @@ const STATUS_COLOR_RESOLVED = {};
 // stops reference the CSS vars directly, so they repaint on theme change
 // with no JS involvement.
 const STATUS_GRADIENT_ID = {
+  no_status: "gradNoStatus",
   overdue: "gradOverdue",
   pending: "gradPending",
   awaiting_approval: "gradAwaitingApproval",
   in_progress: "gradInProgress",
   completed: "gradCompleted",
 };
+
+// Which marketplace/portal an Ecomm task is about (see lib/ecommPlanner.js —
+// no other team's sheet has this field). Matched to each platform's own
+// brand colour where there's an obvious one (Zepto purple, Instamart
+// orange, Flipkart/FK Mins blue, ...) so the badge reads as "that platform"
+// on sight rather than an arbitrary category colour. Slugged (lowercased,
+// non-alphanumeric stripped) so "Bigbasket " with its stray trailing space
+// still matches "bigbasket".
+const PORTAL_SLUG_CLASS = {
+  zepto: "portal-zepto",
+  blinkit: "portal-blinkit",
+  instamart: "portal-instamart",
+  amazon: "portal-amazon",
+  bigbasket: "portal-bigbasket",
+  firstclub: "portal-firstclub",
+  fkmins: "portal-fkmins",
+  website: "portal-website",
+  others: "portal-others",
+  all: "portal-all",
+};
+function portalSlug(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+// A portal name this map hasn't seen yet (Ecomm adds one, or another team
+// starts using the same field) still gets a badge — just the neutral
+// fallback class instead of a bespoke brand colour — rather than silently
+// rendering unstyled text.
+function portalBadgeHTML(portal) {
+  if (!portal) return "";
+  const cls = PORTAL_SLUG_CLASS[portalSlug(portal)] || "portal-other";
+  return `<span class="portal-badge ${cls}">${escapeHTML(portal)}</span>`;
+}
 
 function resolveColors() {
   const style = getComputedStyle(document.documentElement);
@@ -39,12 +77,14 @@ let currentReportDateLabel = null; // e.g. "Week of Aug 11–17, 2026" — the d
 // report was generated for, so switching back to a scope/mode/week combo
 // someone already generated restores it instead of showing empty.
 function reportExtraParam() {
-  return currentReportMode === "plan" ? "" : document.getElementById("reportWeekSelect").value || "";
+  if (currentReportMode === "plan") return "";
+  if (currentReportMode === "eod") return document.getElementById("reportDaySelect").value || "";
+  return document.getElementById("reportWeekSelect").value || "";
 }
 async function loadReportFromStorage(scope, mode, extra) {
   try {
     let url = `/api/report?scope=${encodeURIComponent(scope)}&type=${encodeURIComponent(mode)}`;
-    if (extra) url += `&week=${encodeURIComponent(extra)}`;
+    if (extra) url += mode === "eod" ? `&day=${encodeURIComponent(extra)}` : `&week=${encodeURIComponent(extra)}`;
     const res = await fetch(url, { method: "GET" });
     if (!res.ok) return null;
     const json = await res.json();
@@ -88,6 +128,7 @@ function render(data) {
   renderScopedView(data);
   renderFooter(data);
   populateWeekSelect(data);
+  populateDaySelect(data);
   loadTaskList(currentScope);
 
   const dt = new Date(data.generatedAt);
@@ -104,6 +145,7 @@ function silentRefresh(data) {
   renderScopedContent(data);
   renderFooter(data);
   populateWeekSelect(data);
+  populateDaySelect(data);
   loadTaskList(currentScope);
 
   const dt = new Date(data.generatedAt);
@@ -144,6 +186,36 @@ function populateWeekSelect(data) {
   select.value = entries.some(([p]) => p === prevValue) ? prevValue : thisWeekStart;
 }
 
+/** Same idea as populateWeekSelect, for the EOD report's day picker — lets
+ * you generate the recap for yesterday (or any past day with data) instead
+ * of always whatever day the server auto-detects as "most recent". Days
+ * after today are excluded — a future Deadline can still create a daily
+ * bucket for that day (see lib/aiReport.js's latestDailyPeriod), and
+ * picking one wouldn't mean anything for an end-of-day recap. */
+function populateDaySelect(data) {
+  const select = document.getElementById("reportDaySelect");
+  const todayISO = localToday().toISOString().slice(0, 10);
+  const yesterday = new Date(localToday());
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const yesterdayISO = yesterday.toISOString().slice(0, 10);
+
+  const daysMap = new Map();
+  for (const d of data.daily || []) {
+    if (d.periodStart <= todayISO) daysMap.set(d.periodStart, d.label);
+  }
+  if (!daysMap.has(todayISO)) daysMap.set(todayISO, "no data yet");
+
+  const entries = Array.from(daysMap.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  const prevValue = select.value;
+  select.innerHTML = entries
+    .map(([periodStart, label]) => {
+      const text =
+        periodStart === todayISO ? `Today (${label})` : periodStart === yesterdayISO ? `Yesterday (${label})` : label;
+      return `<option value="${periodStart}">${text}</option>`;
+    })
+    .join("");
+  select.value = entries.some(([p]) => p === prevValue) ? prevValue : todayISO;
+}
 
 function fmt(n) {
   if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "K";
@@ -407,6 +479,14 @@ const REPORT_MODE_META = {
     emptyText: (scopeText) =>
       `Get an accountability-focused end-of-week report for ${scopeText} — what's done, what's carried over (and for how long), and this week's priorities.`,
   },
+  eod: {
+    buttonLabel: "Generate EOD Summary",
+    regenerateLabel: "Regenerate",
+    generatingLabel: "Wrapping up…",
+    errorNoun: "EOD summary",
+    emptyText: (scopeText) =>
+      `Get an end-of-day recap of ${scopeText} activity today — what got done, what's still open, and tomorrow's priority.`,
+  },
 };
 
 function showReportEmptyState(scopeLabel) {
@@ -459,7 +539,7 @@ async function resetReportPanel(scopeLabel) {
  * destination in every modern browser, so this needs no PDF library. */
 function saveReportAsPdf() {
   const scopeLabel = currentScope === "total" ? "Total" : (currentData.perSheet[currentScope] || {}).name || currentScope;
-  const modeLabel = { summary: "Summary", plan: "Weekly Plan", eow: "End of Week" }[currentReportMode] || "Report";
+  const modeLabel = { summary: "Summary", plan: "Weekly Plan", eow: "End of Week", eod: "End of Day" }[currentReportMode] || "Report";
   // Prefer the actual date(s) the report's data covers over when it happened
   // to be generated — a report can be regenerated well after the week/day it
   // describes, so "generated at" is misleading as the headline date.
@@ -773,6 +853,10 @@ async function generateReport() {
     if (currentReportMode === "summary" || currentReportMode === "eow") {
       const week = document.getElementById("reportWeekSelect").value;
       if (week) url += `&week=${encodeURIComponent(week)}`;
+    }
+    if (currentReportMode === "eod") {
+      const day = document.getElementById("reportDaySelect").value;
+      if (day) url += `&day=${encodeURIComponent(day)}`;
     }
     const res = await fetch(url, { method: "POST" });
     const json = await res.json();
@@ -1478,7 +1562,7 @@ function renderTaskListTable() {
         : "";
       return `
       <tr class="${hasNotes ? "has-notes" : ""}" data-note-index="${i}" ${hasNotes ? 'role="button" tabindex="0" aria-expanded="false"' : ""}>
-        <td>${escapeHTML(t.task)}${hasNotes ? '<span class="note-indicator" title="Has notes — click to view">Notes</span>' : ""}</td>
+        <td>${portalBadgeHTML(t.portal)}${escapeHTML(t.task)}${hasNotes ? '<span class="note-indicator" title="Has notes — click to view">Notes</span>' : ""}</td>
         ${teamCell}
         <td>${ownerBadgesHTML(t.assignedTo)}</td>
         <td><span class="badge ${t.status}">${currentData.statusLabels[t.status]}</span></td>
@@ -1606,7 +1690,8 @@ document.querySelectorAll("#reportModeToggle .seg-btn").forEach((btn) => {
     if (m === currentReportMode || !currentData) return;
     currentReportMode = m;
     document.querySelectorAll("#reportModeToggle .seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
-    document.getElementById("reportWeekSelect").hidden = m === "plan";
+    document.getElementById("reportWeekSelect").hidden = m === "plan" || m === "eod";
+    document.getElementById("reportDaySelect").hidden = m !== "eod";
     const scopeLabel = currentScope === "total" ? "Total" : currentData.perSheet[currentScope].name;
     resetReportPanel(scopeLabel);
   });
@@ -1616,10 +1701,10 @@ document.querySelectorAll("#reportModeToggle .seg-btn").forEach((btn) => {
 // opens WhatsApp with the message pre-filled; the person still hits Send
 // themselves inside WhatsApp. No account, no API key, no backend. ) ----
 const REMINDER_META = {
-  eow: {
-    heading: "Send EOW Update Reminder",
+  eod: {
+    heading: "Send EOD Update Reminder",
     message: (scopeName) =>
-      `Reminder: please update this week's status for *${scopeName}* in the Task Tracker — log what got done, and update notes on anything still open so it doesn't read as untouched.`,
+      `Reminder: please update today's EOD status for *${scopeName}* in the Task Tracker — log what got done today and update task notes.`,
   },
   plan: {
     heading: "Send Weekly Plan Reminder",

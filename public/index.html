@@ -34,6 +34,10 @@
     <defs>
       <!-- Bar fills use the quieter --fill-* set, not the --status-* marks:
            see the note beside those tokens in styles.css. -->
+      <linearGradient id="gradNoStatus" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" style="stop-color:var(--fill-no-status);stop-opacity:1" />
+        <stop offset="100%" style="stop-color:var(--fill-no-status);stop-opacity:0.82" />
+      </linearGradient>
       <linearGradient id="gradOverdue" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" style="stop-color:var(--fill-overdue);stop-opacity:1" />
         <stop offset="100%" style="stop-color:var(--fill-overdue);stop-opacity:0.82" />
@@ -129,8 +133,10 @@
             <button type="button" class="seg-btn active" data-mode="summary">Summary</button>
             <button type="button" class="seg-btn" data-mode="plan">Weekly Plan</button>
             <button type="button" class="seg-btn" data-mode="eow">End of Week</button>
+            <button type="button" class="seg-btn" data-mode="eod">End of Day</button>
           </div>
           <select class="select-input" id="reportWeekSelect" aria-label="Week to report on"></select>
+          <select class="select-input" id="reportDaySelect" aria-label="Day to recap" hidden></select>
           <button class="btn btn-icon-only" id="reportCopyBtn" type="button" aria-label="Copy report" title="Copy report to clipboard" hidden>
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3H5a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h5M14 3h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5M9 17H5c-1.1 0-2-.9-2-2"/></svg>
           </button>
@@ -156,9 +162,9 @@
         <h2>Reminders</h2>
       </div>
       <div class="reminder-row">
-        <button class="btn btn-reminder reminder-eow" type="button" data-reminder="eow">
+        <button class="btn btn-reminder reminder-eod" type="button" data-reminder="eod">
           <span class="reminder-icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
-          <span>Remind: EOW Update</span>
+          <span>Remind: EOD Update</span>
         </button>
         <button class="btn btn-reminder reminder-plan" type="button" data-reminder="plan">
           <span class="reminder-icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3M16 3v3M4 9h16M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z"/></svg></span>
@@ -188,6 +194,7 @@
           </select>
           <select class="select-input" id="taskStatusSelect" aria-label="Filter by status">
             <option value="">All statuses</option>
+            <option value="no_status">No Status</option>
             <option value="overdue">Overdue</option>
             <option value="pending">Pending</option>
             <option value="awaiting_approval">Awaiting Approval</option>

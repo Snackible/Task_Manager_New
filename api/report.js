@@ -6,20 +6,23 @@ import { saveReport, loadReport } from "../lib/reportStore.js";
 // can comfortably take under a minute even in the worst case, well within
 // Vercel's default 300s function duration — no custom maxDuration needed.
 
-/** The "extra" key that pins a report to a specific week beyond just
+/** The "extra" key that pins a report to a specific week/day beyond just
  * scope+type — mirrors the client's reportExtraParam() so a save and a
- * later restore land on the exact same storage key. Both summary and eow
- * are week-scoped now (eow replaced the old day-scoped eod). */
-function reportExtraParam(type, week) {
-  return type === "plan" ? "" : week || "";
+ * later restore land on the exact same storage key. summary/eow are
+ * week-scoped, eod is day-scoped, plan has no extra key. */
+function reportExtraParam(type, week, day) {
+  if (type === "plan") return "";
+  if (type === "eod") return day || "";
+  return week || "";
 }
 
 export default async function handler(req, res) {
   const scope = (req.query && req.query.scope) || "total";
   const rawType = req.query && req.query.type;
-  const type = ["plan", "eow"].includes(rawType) ? rawType : "summary";
+  const type = ["plan", "eow", "eod"].includes(rawType) ? rawType : "summary";
   const week = (req.query && req.query.week) || null; // Monday (YYYY-MM-DD); summary/eow modes
-  const extra = reportExtraParam(type, week);
+  const day = (req.query && req.query.day) || null; // YYYY-MM-DD; eod mode only
+  const extra = reportExtraParam(type, week, day);
 
   if (req.method === "GET") {
     // Restores whatever was last generated for this exact scope/type/week
@@ -42,7 +45,7 @@ export default async function handler(req, res) {
   }
   try {
     const { payload, rawSheets } = await getDashboardData();
-    const { text: report, dateLabel } = await generateReport(payload, rawSheets, scope, type, week);
+    const { text: report, dateLabel } = await generateReport(payload, rawSheets, scope, type, week, day);
     const generatedAt = new Date().toISOString();
     try {
       await saveReport(scope, type, extra, { report, dateLabel });

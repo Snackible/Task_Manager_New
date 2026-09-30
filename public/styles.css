@@ -48,12 +48,23 @@
      hues. One set serves both themes — they're mid-tones, so they hold 3:1
      against the light panel and the dark one, and every one clears 4.5:1
      against the dark ink of the count printed inside it. */
+  /* Its own dedicated mid-gray, not --text-muted directly: this fills a
+     54px chart block with a fixed dark-ink label drawn on top (see
+     .comp-seg-label), a different contrast job than muted text on a panel —
+     tuned to hold 4.5:1+ against that ink in both themes. */
+  --fill-no-status:          #7d8290;
   --fill-overdue:            #cc6666;
   --fill-pending:            #4f86cc;
   --fill-awaiting-approval:  #3fa99e;
   --fill-in-progress:        #d2a044;
   --fill-completed:          #57a04e;
 
+  /* Reuses --text-muted rather than its own hex: "no status" means nobody
+     recorded one, which is a neutral/absence fact, not a graded severity
+     like the other five — and riding on --text-muted keeps it correctly
+     legible in both themes for free instead of needing its own dark-mode
+     override. */
+  --status-no-status:    var(--text-muted);
   --status-pending:            #2a78d6; /* categorical blue: not yet started */
   --status-awaiting-approval:  #0f9488; /* categorical teal: done, waiting on someone else's sign-off */
   --status-in-progress:        #fab219; /* status warning: actively being worked */
@@ -404,7 +415,7 @@ body {
   border-color: var(--status-pending);
 }
 .text-input::placeholder { color: var(--text-muted); }
-#reportWeekSelect { max-width: 200px; }
+#reportWeekSelect, #reportDaySelect { max-width: 200px; }
 
 .tasks-filters { flex-wrap: wrap; }
 #taskSearch { min-width: 180px; }
@@ -869,6 +880,39 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   padding: 2px 8px;
   vertical-align: middle;
 }
+/* Which marketplace/portal a task is about (Ecomm only — see
+   lib/ecommPlanner.js and portalBadgeHTML() in app.js). Matched to each
+   platform's own brand colour where there's a recognizable one, so the
+   badge reads as "that platform" at a glance instead of an arbitrary
+   category colour; "portal-other" is the fallback for anything not in
+   that fixed set, so a new or renamed category still gets a badge instead
+   of silently rendering unstyled. */
+.portal-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 2px 8px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.portal-zepto      { color: #9333ea; border-color: #9333ea; background: color-mix(in srgb, #9333ea 14%, transparent); }
+.portal-blinkit     { color: #f0a500; border-color: #f0a500; background: color-mix(in srgb, #f0a500 16%, transparent); }
+.portal-instamart   { color: #fc8019; border-color: #fc8019; background: color-mix(in srgb, #fc8019 15%, transparent); }
+.portal-amazon      { color: #d68910; border-color: #d68910; background: color-mix(in srgb, #d68910 14%, transparent); }
+.portal-bigbasket   { color: #22a350; border-color: #22a350; background: color-mix(in srgb, #22a350 14%, transparent); }
+.portal-firstclub   { color: #e0559a; border-color: #e0559a; background: color-mix(in srgb, #e0559a 14%, transparent); }
+.portal-fkmins      { color: #2874d1; border-color: #2874d1; background: color-mix(in srgb, #2874d1 14%, transparent); }
+.portal-website     { color: var(--text-secondary); border-color: var(--baseline); background: var(--surface-2); }
+.portal-others,
+.portal-all,
+.portal-other       { color: var(--text-muted); border-color: var(--baseline); background: var(--surface-2); }
+
 .task-note-row td {
   background: var(--surface-2);
   color: var(--text-secondary);
@@ -940,6 +984,7 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
 .badge.live { color: var(--status-completed); border-color: var(--status-completed); background: color-mix(in srgb, var(--status-completed) 12%, transparent); }
 .badge.demo { color: var(--status-in-progress); border-color: var(--status-in-progress); background: color-mix(in srgb, var(--status-in-progress) 16%, transparent); }
 .badge.empty { color: var(--text-muted); }
+.badge.no_status { color: var(--status-no-status); border-color: var(--status-no-status); background: color-mix(in srgb, var(--status-no-status) 12%, transparent); }
 .badge.overdue { color: var(--status-overdue); border-color: var(--status-overdue); background: color-mix(in srgb, var(--status-overdue) 12%, transparent); }
 .badge.pending { color: var(--status-pending); border-color: var(--status-pending); background: color-mix(in srgb, var(--status-pending) 12%, transparent); }
 .badge.awaiting_approval { color: var(--status-awaiting-approval); border-color: var(--status-awaiting-approval); background: color-mix(in srgb, var(--status-awaiting-approval) 12%, transparent); }
@@ -1218,11 +1263,12 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
      and the select each onto their own full-width line makes the wrap
      point predictable: controls, then select, then actions — every time. */
   .panel-actions > .seg-toggle,
-  .panel-actions > #reportWeekSelect {
+  .panel-actions > #reportWeekSelect,
+  .panel-actions > #reportDaySelect {
     flex: 1 1 100%;
   }
   .panel-actions > .seg-toggle .seg-btn { flex: 1; text-align: center; }
-  #reportWeekSelect { max-width: none; }
+  #reportWeekSelect, #reportDaySelect { max-width: none; }
 
   .tasks-filters > * { flex: 1 1 100%; }
 

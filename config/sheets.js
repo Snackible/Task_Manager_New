@@ -10,8 +10,12 @@
 //     the sheet fetchable by anyone with the link.
 //   - `sheetId` (+ optional `tab`, default "Sheet1") to read live via the
 //     Google Sheets API using a service account (see README "Live data" section).
+//   - `fetcher`, an async function returning rows directly, for a sheet
+//     whose layout needs real parsing beyond "CSV + header row" — banner
+//     rows to strip, merged cells to forward-fill, a task title split
+//     across columns. See lib/ecommPlanner.js and lib/b2bPlanner.js.
 //
-// Leave all three empty (or omit the entry) to fall back to bundled demo data
+// Leave all four empty (or omit the entry) to fall back to bundled demo data
 // for that slot (see data/sampleData.js) so the dashboard still runs out of the box.
 //
 // Every sheet is expected to have this header row (case-insensitive, order
@@ -23,6 +27,8 @@
 // fixed string/array — see the Marketing entry below.
 
 import { monthlyTabCsvUrl } from "../lib/sheetsClient.js";
+import { fetchEcommPlannerRows } from "../lib/ecommPlanner.js";
+import { fetchB2bPlannerRows } from "../lib/b2bPlanner.js";
 
 export const SHEETS = [
   {
@@ -51,13 +57,14 @@ export const SHEETS = [
   {
     key: "b2b",
     name: "B2B",
-    sheetId: "1fSUA6m6z36YAyKlGk1zhAP7SeJ7arPa9n2d0xR3CQxE",
-    tab: "Sheet1",
-    // Switched from appScriptUrl to csvUrl — the old deployment was
-    // confirmed returning HTTP 403. Now shared link-viewable, so CSV
-    // export works directly.
-    csvUrl: "https://docs.google.com/spreadsheets/d/1fSUA6m6z36YAyKlGk1zhAP7SeJ7arPa9n2d0xR3CQxE/export?format=csv&gid=0",
-    appScriptUrl: "",
+    // Reads 0 tasks with a plain csvUrl, not because the sheet is empty —
+    // it has real rows — but because row 1 is a banner ("Week 4; 28th to
+    // 3rd September - Diwali Strategy") that a generic header-row-0 parser
+    // treats as the header, so every "task"/"status" lookup comes up empty.
+    // fetchB2bPlannerRows finds the real header and merges the task title's
+    // two possible columns (Actionable / Task-Client-Name) into one. See
+    // lib/b2bPlanner.js.
+    fetcher: fetchB2bPlannerRows,
   },
   {
     key: "gtmt",
@@ -94,14 +101,14 @@ export const SHEETS = [
   {
     key: "ecomm",
     name: "Ecomm",
-    sheetId: "1W2S-smCzfRFUk6MqbHxhEQ4I_xvAUYJr04NtfAmwURs",
-    tab: "",
-    // NOTE: the gid in the link you sent (0) is a kanban-style planning tab
-    // with no per-row Status column, so nothing there could be counted. This
-    // points at the "EOD" tab (gid 1199127127) in the same spreadsheet
-    // instead, which has the Task/Status/Date shape we need.
-    csvUrl: "https://docs.google.com/spreadsheets/d/1W2S-smCzfRFUk6MqbHxhEQ4I_xvAUYJr04NtfAmwURs/export?format=csv&gid=1199127127",
-    appScriptUrl: "",
+    // Was pointed at the "EOD" tab (gid 1199127127) because gid 0 looked
+    // like a kanban board with no per-row Status column — but the EOD tab
+    // itself turned out to be the one that had gone stale (nothing logged
+    // there since 2026-09-01), while gid 0 ("the current tracker") is what
+    // the team actually keeps updating. It does have the Task/Status/Date
+    // shape we need, just spread across banner rows and merged cells that
+    // a plain csvUrl can't parse — see lib/ecommPlanner.js.
+    fetcher: fetchEcommPlannerRows,
   },
   {
     key: "finance",
