@@ -1315,6 +1315,20 @@ function renderSeriesTable(series) {
     </table>`;
 }
 
+// Sum of every status bucket in a team's CURRENT calendar week — independent
+// of the page's own Period filter (which only scopes the stat tiles/chart),
+// since every other column in this table is already a lifetime total, not
+// period-filtered. Anchored to perSheetWeekly, the same weekly buckets the
+// chart itself uses, so this always agrees with what "This week" means
+// elsewhere on the page. 0 (not blank) when a team has no dated activity
+// yet this week — that's a real, worth-seeing count, not missing data.
+function tasksThisWeekCount(data, teamKey) {
+  const thisWeekStart = isoWeekStartClient(localToday()).toISOString().slice(0, 10);
+  const weekEntry = (data.perSheetWeekly[teamKey] || []).find((w) => w.periodStart === thisWeekStart);
+  if (!weekEntry) return 0;
+  return STATUS_ORDER.reduce((sum, s) => sum + (weekEntry[s] || 0), 0);
+}
+
 function renderTeamTable(data) {
   const wrap = document.getElementById("teamTableWrap");
   const rows = Object.entries(data.perSheet)
@@ -1326,6 +1340,7 @@ function renderTeamTable(data) {
         <td class="num">${s.in_progress}</td>
         <td class="num">${s.completed}</td>
         <td class="num">${s.total}</td>
+        <td class="num">${tasksThisWeekCount(data, key)}</td>
         <td>${badgeHTML(data.sources[key])}</td>
       </tr>`;
     })
@@ -1333,7 +1348,7 @@ function renderTeamTable(data) {
   wrap.innerHTML = `
     <table class="data-table clickable-rows">
       <thead>
-        <tr><th>Team</th><th class="num">Pending</th><th class="num">In Progress</th><th class="num">Completed</th><th class="num">Total</th><th>Source</th></tr>
+        <tr><th>Team</th><th class="num">Pending</th><th class="num">In Progress</th><th class="num">Completed</th><th class="num">Total</th><th class="num">Tasks This Week</th><th>Source</th></tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>`;

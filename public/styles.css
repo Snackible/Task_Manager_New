@@ -530,6 +530,15 @@ body {
   border: 1px solid var(--border);
   border-radius: 999px;
   flex: none;
+  /* A flex item's default min-width is auto, which for a row of nowrap
+     buttons means "never shrink below all 4 labels' natural width" — the
+     report toggle (Summary/Weekly Plan/End of Week/End of Day) then
+     overflowed its own container once forced to flex:1 1 100% on mobile
+     (see below) instead of shrinking to fit. min-width: 0 lets it actually
+     shrink; overflow-x is the fallback once it can't shrink any further,
+     same pattern as .tab-bar. */
+  min-width: 0;
+  overflow-x: auto;
 }
 .seg-btn {
   font: inherit;
@@ -1197,6 +1206,18 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   .stat-tile:nth-child(n + 3) { border-top: 1px solid var(--rule); }
   .stat-tile .value { font-size: 28px; }
 }
+/* The 2-column tier above covers a wide range (421–720px) with one fixed
+   size, which looks fine near 720px but cramped near the low end — a tile
+   half as wide holding the same 28px value and a label like "AWAITING
+   APPROVAL" that barely fits on one line. This tightens padding and text
+   specifically for that lower half of the range, so it keeps shrinking
+   instead of hitting one size and stopping. */
+@media (max-width: 560px) {
+  .stat-tile { padding: 14px 14px 16px; }
+  .stat-tile .label { font-size: 10px; gap: 6px; margin-bottom: 10px; }
+  .stat-tile .value { font-size: 23px; }
+  .stat-tile .sub { font-size: 10.5px; }
+}
 @media (max-width: 420px) {
   .stat-row { grid-template-columns: 1fr; }
   .stat-tile, .stat-tile:nth-child(even) { border-left: none; }
@@ -1214,7 +1235,7 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   .stat-tile .label { grid-column: 1; margin-bottom: 0; }
   .stat-tile .sub { grid-column: 1; margin-top: 0; }
   .stat-tile .value-row { grid-column: 2; grid-row: 1 / span 2; }
-  .stat-tile .value { font-size: 26px; }
+  .stat-tile .value { font-size: 24px; }
 }
 
 /* ---- Phone layout ----
@@ -1268,6 +1289,25 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
     flex: 1 1 100%;
   }
   .panel-actions > .seg-toggle .seg-btn { flex: 1; text-align: center; }
+  /* The report mode toggle grew a 4th option (End of Day); stretching all
+     four evenly (the rule above, still right for the chart's 2-button
+     Weekly/Daily toggle) squeezed "Weekly Plan" and "End of Week" narrower
+     than their own text, overflowing the pill's rounded edge. A horizontal
+     scroll (matching the team tab bar's own overflow fallback) fixed the
+     overflow but traded it for a hidden 4th option behind a drag gesture —
+     worse for a control people tap through often. Wrapping into a 2x2 grid
+     keeps every option visible and tappable with no gesture needed; the
+     container's radius drops from a full pill to a rounded rectangle since
+     a pill shape reads oddly once it holds two rows instead of one. */
+  #reportModeToggle.seg-toggle {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    border-radius: 14px;
+  }
+  #reportModeToggle.seg-toggle .seg-btn {
+    flex: 1 1 calc(50% - 1px);
+    text-align: center;
+  }
   #reportWeekSelect, #reportDaySelect { max-width: none; }
 
   .tasks-filters > * { flex: 1 1 100%; }
