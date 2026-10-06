@@ -2,7 +2,7 @@
 // been categorized yet, which reads as a more basic gap than "pending" (see
 // statusUtils.js: blank used to silently become "pending," which hid that
 // gap entirely).
-const STATUS_ORDER = ["no_status", "overdue", "pending", "awaiting_approval", "in_progress", "completed"];
+const STATUS_ORDER = ["completed", "in_progress", "awaiting_approval", "pending", "overdue", "no_status"];
 const STATUS_COLOR = {
   no_status: "var(--status-no-status)",
   overdue: "var(--status-overdue)",
