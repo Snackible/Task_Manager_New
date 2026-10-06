@@ -303,7 +303,7 @@ function periodOverlapsRange(periodStart, range, granularity) {
 
 /** Sum a weekly/daily series' per-period status counts into one totals object. */
 function sumSeriesTotals(series) {
-  const totals = { overdue: 0, pending: 0, in_progress: 0, completed: 0 };
+  const totals = Object.fromEntries(STATUS_ORDER.map((s) => [s, 0]));
   for (const period of series) {
     for (const status of STATUS_ORDER) totals[status] += period[status] || 0;
   }
@@ -335,7 +335,7 @@ function scopedView(data) {
   } else {
     const sheet = data.perSheet[currentScope];
     label = sheet.name;
-    totals = { overdue: sheet.overdue, pending: sheet.pending, in_progress: sheet.in_progress, completed: sheet.completed };
+    totals = Object.fromEntries(STATUS_ORDER.map((s) => [s, sheet[s] || 0]));
     series = (data[perSheetSeriesKey] && data[perSheetSeriesKey][currentScope]) || [];
     taskCount = sheet.total;
     source = data.sources[currentScope];
@@ -349,6 +349,85 @@ function scopedView(data) {
   }
 
   return { label, totals, series, taskCount, source };
+}
+
+/** Per-department status totals for the active Period filter, computed the
+ * same way scopedView() does so a tile's number always equals the sum of
+ * its hover breakdown. */
+function teamTotalsForView(data) {
+  const effectiveGranularity = currentDateRange === "today" ? "daily" : currentGranularity;
+  const seriesKey = effectiveGranularity === "daily" ? "perSheetDaily" : "perSheetWeekly";
+  const range = dateRangeBounds(currentDateRange);
+  return Object.entries(data.perSheet).map(([key, sheet]) => {
+    let totals;
+    if (range) {
+      const series = ((data[seriesKey] || {})[key] || []).filter((p) =>
+        periodOverlapsRange(p.periodStart, range, effectiveGranularity)
+      );
+      totals = sumSeriesTotals(series);
+    } else {
+      totals = Object.fromEntries(STATUS_ORDER.map((s) => [s, sheet[s] || 0]));
+    }
+    return { key, name: sheet.name, totals, total: STATUS_ORDER.reduce((sum, s) => sum + totals[s], 0) };
+  });
+}
+
+/** Warning strip listing departments with zero tasks logged in the current
+ * week (Period = This week) or today (Period = Today). Other periods are
+ * too broad for "hasn't filled anything in" to mean much. Teams that aren't
+ * on live data are skipped — a failed fetch isn't the team's fault. */
+function renderMissingNotice(data) {
+  const el = document.getElementById("periodNotice");
+  if (currentDateRange !== "week" && currentDateRange !== "today") {
+    el.hidden = true;
+    return;
+  }
+  const missing = teamTotalsForView(data).filter(
+    (t) => t.total === 0 && data.sources[t.key] === "live" && (currentScope === "total" || currentScope === t.key)
+  );
+  if (!missing.length) {
+    el.hidden = true;
+    return;
+  }
+  const when = currentDateRange === "today" ? "today" : "this week";
+  el.innerHTML = `
+    <span class="notice-icon" aria-hidden="true">&#9888;</span>
+    <span class="notice-text"><strong>No tasks logged ${when}</strong></span>
+    <span class="notice-chips">${missing.map((t) => `<span class="notice-chip">${t.name}</span>`).join("")}</span>
+  `;
+  el.hidden = false;
+}
+
+function showTileTooltip(evt, status) {
+  const tip = document.getElementById("tileTooltip");
+  const teams = teamTotalsForView(currentData).sort((a, b) => b.totals[status] - a.totals[status]);
+  const sum = teams.reduce((s, t) => s + t.totals[status], 0);
+  tip.innerHTML = `
+    <div class="tt-title">${currentData.statusLabels[status]} by department</div>
+    ${teams
+      .map(
+        (t) => `
+      <div class="tt-row${t.totals[status] === 0 ? " is-zero" : ""}">
+        <span class="k">${t.name}</span>
+        <span class="v">${t.totals[status]}</span>
+      </div>`
+      )
+      .join("")}
+    <div class="tt-row tt-sum"><span class="k">Total</span><span class="v">${sum}</span></div>
+  `;
+  tip.hidden = false;
+  const pad = 12;
+  const rect = tip.getBoundingClientRect();
+  let left = evt.clientX + pad;
+  let top = evt.clientY + pad;
+  if (left + rect.width > window.innerWidth - 8) left = evt.clientX - rect.width - pad;
+  if (top + rect.height > window.innerHeight - 8) top = window.innerHeight - rect.height - 8;
+  tip.style.left = `${Math.max(8, left)}px`;
+  tip.style.top = `${Math.max(8, top)}px`;
+}
+
+function hideTileTooltip() {
+  document.getElementById("tileTooltip").hidden = true;
 }
 
 function renderTabs(data) {
@@ -404,6 +483,7 @@ function replayFadeIn(el) {
 function renderScopedContent(data) {
   const view = scopedView(data);
 
+  renderMissingNotice(data);
   renderStatTiles(view);
   renderLegend(data);
   renderSeriesChart(view.series);
@@ -897,7 +977,19 @@ function renderStatTiles(view) {
     tile.setAttribute("role", "button");
     tile.tabIndex = 0;
     tile.setAttribute("aria-pressed", String(isActive));
-    tile.title = isActive ? `Click to clear the ${label} filter` : `Click to filter tasks by ${label}`;
+    // In the Total view the custom hover breakdown replaces the native
+    // tooltip (two stacked tooltips would fight each other).
+    if (currentScope !== "total") {
+      tile.title = isActive ? `Click to clear the ${label} filter` : `Click to filter tasks by ${label}`;
+    } else {
+      tile.addEventListener("mousemove", (e) => showTileTooltip(e, status));
+      tile.addEventListener("mouseleave", hideTileTooltip);
+      tile.addEventListener("focus", () => {
+        const r = tile.getBoundingClientRect();
+        showTileTooltip({ clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }, status);
+      });
+      tile.addEventListener("blur", hideTileTooltip);
+    }
     tile.innerHTML = `
       <div class="label"><span class="swatch" style="background:${STATUS_COLOR[status]}"></span>${label}</div>
       <div class="value-row">
@@ -921,6 +1013,7 @@ function renderStatTiles(view) {
 // filter state, just reachable from the summary numbers too. Clicking the
 // already-active tile clears the filter instead of doing nothing.
 function toggleStatTileFilter(status) {
+  hideTileTooltip();
   taskStatusFilter = taskStatusFilter === status ? "" : status;
   const select = document.getElementById("taskStatusSelect");
   if (select) select.value = taskStatusFilter;

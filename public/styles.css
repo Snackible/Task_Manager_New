@@ -815,6 +815,40 @@ body {
 .tooltip .tt-row .dot { width: 8px; height: 8px; border-radius: 2px; flex: none; }
 .tooltip .tt-row .v { font-variant-numeric: tabular-nums; font-weight: 700; }
 
+/* Stat-tile hover breakdown — fixed-positioned so the stat row's rounded
+   overflow clipping can't cut it off. */
+.tile-tooltip { position: fixed; min-width: 170px; }
+.tooltip .tt-row.is-zero { opacity: 0.45; }
+.tooltip .tt-row.tt-sum {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.period-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--status-in-progress, #f5a623) 45%, var(--border));
+  background: color-mix(in srgb, var(--status-in-progress, #f5a623) 10%, var(--surface-1));
+  border-radius: 12px;
+  font-size: 13px;
+}
+.period-notice[hidden] { display: none; }
+.period-notice .notice-icon { color: var(--status-in-progress, #f5a623); }
+.period-notice .notice-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.period-notice .notice-chip {
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2, var(--surface-1));
+  font-weight: 600;
+  font-size: 12px;
+}
+
 /* Wide tables scroll sideways rather than crushing their columns. Applies
    to the panel tables (By team, Tasks, the chart's table view) and to the
    report's own tables, which get .table-scroll from renderMarkdownLite. */
