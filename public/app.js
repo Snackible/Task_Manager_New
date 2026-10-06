@@ -1666,11 +1666,11 @@ function renderTaskListTable() {
       // expansion resetting when the underlying list changes is the
       // expected behavior, not a bug, so no state tracking needed here.
       const noteRow = hasNotes
-        ? `<tr class="task-note-row" data-note-index="${i}" hidden><td colspan="${colCount}"><span class="task-note-label">Notes:</span> ${escapeHTML(t.notes)}</td></tr>`
+        ? `<tr class="task-note-row" data-note-index="${i}"><td colspan="${colCount}"><span class="task-note-label">Notes:</span> ${escapeHTML(t.notes)}</td></tr>`
         : "";
       return `
-      <tr class="${hasNotes ? "has-notes" : ""}" data-note-index="${i}" ${hasNotes ? 'role="button" tabindex="0" aria-expanded="false"' : ""}>
-        <td>${portalBadgeHTML(t.portal)}${escapeHTML(t.task)}${hasNotes ? '<span class="note-indicator" title="Has notes — click to view">Notes</span>' : ""}</td>
+      <tr class="${hasNotes ? "has-notes" : ""}" data-note-index="${i}" ${hasNotes ? 'role="button" tabindex="0" aria-expanded="true"' : ""}>
+        <td>${portalBadgeHTML(t.portal)}${escapeHTML(t.task)}</td>
         ${teamCell}
         <td>${ownerBadgesHTML(t.assignedTo)}</td>
         <td><span class="badge ${t.status}">${currentData.statusLabels[t.status]}</span></td>

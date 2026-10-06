@@ -109,23 +109,29 @@
     </section>
     <div id="tileTooltip" class="tooltip tile-tooltip" hidden></div>
 
-    <section class="panel">
+    <section class="panel" id="tasksPanel">
       <div class="panel-header">
-        <h2 id="chartTitle">Weekly breakdown</h2>
-        <div class="panel-actions">
-          <div class="seg-toggle" id="granularityToggle" aria-label="Chart granularity">
-            <button type="button" class="seg-btn active" data-granularity="weekly">Weekly</button>
-            <button type="button" class="seg-btn" data-granularity="daily">Daily</button>
-          </div>
-          <div class="legend" id="chartLegend"></div>
-          <button class="link-btn" id="toggleTableBtn" type="button">View as table</button>
+        <h2 id="tasksTitle">Tasks</h2>
+        <div class="panel-actions tasks-filters">
+          <input class="text-input" id="taskSearch" type="search" placeholder="Search tasks…" aria-label="Search tasks" />
+          <select class="select-input" id="taskOwnerSelect" aria-label="Filter by owner">
+            <option value="">All owners</option>
+          </select>
+          <select class="select-input" id="taskStatusSelect" aria-label="Filter by status">
+            <option value="">All statuses</option>
+            <option value="no_status">No Status</option>
+            <option value="overdue">Overdue</option>
+            <option value="pending">Pending</option>
+            <option value="awaiting_approval">Awaiting Approval</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
         </div>
       </div>
-      <div id="chartWrap">
-        <svg id="weeklyChart" role="img" aria-label="Weekly task counts by status"></svg>
-        <div id="tooltip" class="tooltip" hidden></div>
-      </div>
-      <div id="weeklyTableWrap" hidden></div>
+      <div id="subTabRow" class="sub-tab-row" hidden></div>
+      <div id="ownerFilterChips" class="owner-filter-chips" hidden></div>
+      <div id="taskListWrap"></div>
+      <p class="task-list-count" id="taskListCount"></p>
     </section>
 
     <section class="panel">
@@ -187,29 +193,23 @@
       <div id="teamTableWrap"></div>
     </section>
 
-    <section class="panel" id="tasksPanel">
+    <section class="panel">
       <div class="panel-header">
-        <h2 id="tasksTitle">Tasks</h2>
-        <div class="panel-actions tasks-filters">
-          <input class="text-input" id="taskSearch" type="search" placeholder="Search tasks…" aria-label="Search tasks" />
-          <select class="select-input" id="taskOwnerSelect" aria-label="Filter by owner">
-            <option value="">All owners</option>
-          </select>
-          <select class="select-input" id="taskStatusSelect" aria-label="Filter by status">
-            <option value="">All statuses</option>
-            <option value="no_status">No Status</option>
-            <option value="overdue">Overdue</option>
-            <option value="pending">Pending</option>
-            <option value="awaiting_approval">Awaiting Approval</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-          </select>
+        <h2 id="chartTitle">Weekly breakdown</h2>
+        <div class="panel-actions">
+          <div class="seg-toggle" id="granularityToggle" aria-label="Chart granularity">
+            <button type="button" class="seg-btn active" data-granularity="weekly">Weekly</button>
+            <button type="button" class="seg-btn" data-granularity="daily">Daily</button>
+          </div>
+          <div class="legend" id="chartLegend"></div>
+          <button class="link-btn" id="toggleTableBtn" type="button">View as table</button>
         </div>
       </div>
-      <div id="subTabRow" class="sub-tab-row" hidden></div>
-      <div id="ownerFilterChips" class="owner-filter-chips" hidden></div>
-      <div id="taskListWrap"></div>
-      <p class="task-list-count" id="taskListCount"></p>
+      <div id="chartWrap">
+        <svg id="weeklyChart" role="img" aria-label="Weekly task counts by status"></svg>
+        <div id="tooltip" class="tooltip" hidden></div>
+      </div>
+      <div id="weeklyTableWrap" hidden></div>
     </section>
 
     <footer class="page-footer" id="footer"></footer>
