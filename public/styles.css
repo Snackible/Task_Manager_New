@@ -902,27 +902,42 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   outline-offset: -2px;
 }
 
-.task-list-table tr.has-notes { cursor: pointer; }
-.task-list-table tr.has-notes:hover { background: var(--surface-2); }
-.task-list-table tr.has-notes:focus-visible {
-  outline: 2px solid var(--status-pending);
-  outline-offset: -2px;
+.task-note {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
 }
-.note-indicator {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 8px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--status-pending);
-  border: 1px solid var(--status-pending);
-  background: color-mix(in srgb, var(--status-pending) 12%, transparent);
-  border-radius: 999px;
-  padding: 2px 8px;
-  vertical-align: middle;
+
+/* Bookmark bar: jump links to each section, pinned to the top while
+   scrolling. Wraps instead of scrolling sideways on narrow screens. */
+.section-nav {
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 16px;
+  padding: 6px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
 }
+.section-nav a {
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.12s var(--ease), color 0.12s var(--ease);
+}
+.section-nav a:hover { background: var(--surface-2); color: var(--text-primary); }
+.section-nav a[hidden] { display: none; }
+.panel { scroll-margin-top: 72px; }
 /* Which marketplace/portal a task is about (Ecomm only — see
    lib/ecommPlanner.js and portalBadgeHTML() in app.js). Matched to each
    platform's own brand colour where there's a recognizable one, so the
@@ -955,19 +970,6 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
 .portal-others,
 .portal-all,
 .portal-other       { color: var(--text-muted); border-color: var(--baseline); background: var(--surface-2); }
-
-.task-note-row td {
-  background: var(--surface-2);
-  color: var(--text-secondary);
-  font-size: 13px;
-  padding: 10px 12px 14px;
-  white-space: pre-wrap;
-}
-.task-note-label {
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-right: 4px;
-}
 
 .owner-badge {
   display: inline-flex;

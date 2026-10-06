@@ -519,7 +519,26 @@ function renderScopedContent(data) {
 
   document.getElementById("tasksTitle").textContent =
     currentScope === "total" ? "Tasks" : `Tasks — ${view.label}`;
+
+  syncSectionNav();
 }
+
+/** Bookmark bar: hides the link for any section that isn't on screen in the
+ * current scope (Tasks/Reminders are team-only, By team is Total-only). */
+function syncSectionNav() {
+  document.querySelectorAll("#sectionNav a[data-target]").forEach((a) => {
+    const target = document.getElementById(a.dataset.target);
+    a.hidden = !target || target.hidden;
+  });
+}
+
+document.getElementById("sectionNav").addEventListener("click", (e) => {
+  const a = e.target.closest("a[data-target]");
+  if (!a) return;
+  e.preventDefault();
+  const target = document.getElementById(a.dataset.target);
+  if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+});
 
 /** Full scope render, used whenever the scope/tab actually changes — resets
  * the report panel, since a report generated for the previous tab/team no
@@ -1655,28 +1674,19 @@ function renderTaskListTable() {
     return;
   }
 
-  const colCount = showTeamColumn ? 6 : 5;
   const shown = filtered.slice(0, TASK_LIST_DISPLAY_CAP);
   const rows = shown
-    .map((t, i) => {
+    .map((t) => {
       const teamCell = showTeamColumn ? `<td>${t.teamName}</td>` : "";
-      const hasNotes = !!t.notes;
-      // Click-to-expand notes: deliberately not persisted across re-renders
-      // (search/filter/scope changes all rebuild this table from scratch) —
-      // expansion resetting when the underlying list changes is the
-      // expected behavior, not a bug, so no state tracking needed here.
-      const noteRow = hasNotes
-        ? `<tr class="task-note-row" data-note-index="${i}"><td colspan="${colCount}"><span class="task-note-label">Notes:</span> ${escapeHTML(t.notes)}</td></tr>`
-        : "";
       return `
-      <tr class="${hasNotes ? "has-notes" : ""}" data-note-index="${i}" ${hasNotes ? 'role="button" tabindex="0" aria-expanded="true"' : ""}>
-        <td>${portalBadgeHTML(t.portal)}${escapeHTML(t.task)}</td>
+      <tr>
+        <td>${portalBadgeHTML(t.portal)}${escapeHTML(t.task)}${t.notes ? `<div class="task-note">${escapeHTML(t.notes)}</div>` : ""}</td>
         ${teamCell}
         <td>${ownerBadgesHTML(t.assignedTo)}</td>
         <td><span class="badge ${t.status}">${currentData.statusLabels[t.status]}</span></td>
         <td>${t.dateReceived ? formatDisplayDate(t.dateReceived) : '<span class="text-muted-cell">—</span>'}</td>
         <td>${t.deadline ? formatDisplayDate(t.deadline) : '<span class="text-muted-cell">—</span>'}</td>
-      </tr>${noteRow}`;
+      </tr>`;
     })
     .join("");
 
@@ -1699,23 +1709,6 @@ function renderTaskListTable() {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       toggleOwnerFilter(btn.dataset.ownerName);
-    });
-  });
-
-  const toggleNote = (tr) => {
-    const idx = tr.dataset.noteIndex;
-    const noteRow = wrap.querySelector(`tr.task-note-row[data-note-index="${CSS.escape(idx)}"]`);
-    if (!noteRow) return;
-    noteRow.hidden = !noteRow.hidden;
-    tr.setAttribute("aria-expanded", String(!noteRow.hidden));
-  };
-  wrap.querySelectorAll("tr.has-notes").forEach((tr) => {
-    tr.addEventListener("click", () => toggleNote(tr));
-    tr.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        toggleNote(tr);
-      }
     });
   });
 

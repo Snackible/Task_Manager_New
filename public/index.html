@@ -102,6 +102,14 @@
       </div>
     </div>
 
+    <nav class="section-nav" id="sectionNav" aria-label="Jump to section">
+      <a href="#tasksPanel" data-target="tasksPanel">Tasks</a>
+      <a href="#reportPanel" data-target="reportPanel">AI Report</a>
+      <a href="#reminderPanel" data-target="reminderPanel">Reminders</a>
+      <a href="#teamPanel" data-target="teamPanel">By team</a>
+      <a href="#chartPanel" data-target="chartPanel">Chart</a>
+    </nav>
+
     <div class="period-notice" id="periodNotice" role="status" hidden></div>
 
     <section class="stat-row" id="statRow" aria-label="Current totals">
@@ -134,7 +142,7 @@
       <p class="task-list-count" id="taskListCount"></p>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="reportPanel">
       <div class="panel-header">
         <h2 id="reportTitle">AI Report</h2>
         <div class="panel-actions">
@@ -193,7 +201,7 @@
       <div id="teamTableWrap"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="chartPanel">
       <div class="panel-header">
         <h2 id="chartTitle">Weekly breakdown</h2>
         <div class="panel-actions">
