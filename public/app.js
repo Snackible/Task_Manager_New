@@ -1031,13 +1031,17 @@ function renderStatTiles(view) {
 // Clicking a stat tile is a shortcut for the status dropdown below — same
 // filter state, just reachable from the summary numbers too. Clicking the
 // already-active tile clears the filter instead of doing nothing.
-function toggleStatTileFilter(status) {
-  hideTileTooltip();
+function toggleStatusFilter(status) {
   taskStatusFilter = taskStatusFilter === status ? "" : status;
   const select = document.getElementById("taskStatusSelect");
   if (select) select.value = taskStatusFilter;
   renderStatTiles(scopedView(currentData));
   renderTaskListTable();
+}
+
+function toggleStatTileFilter(status) {
+  hideTileTooltip();
+  toggleStatusFilter(status);
   document.getElementById("tasksTitle").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -1683,7 +1687,7 @@ function renderTaskListTable() {
         <td>${portalBadgeHTML(t.portal)}${escapeHTML(t.task)}${t.notes ? `<div class="task-note">${escapeHTML(t.notes)}</div>` : ""}</td>
         ${teamCell}
         <td>${ownerBadgesHTML(t.assignedTo)}</td>
-        <td><span class="badge ${t.status}">${currentData.statusLabels[t.status]}</span></td>
+        <td><button type="button" class="badge badge-btn ${t.status}${taskStatusFilter === t.status ? " active" : ""}" data-status="${t.status}" title="${taskStatusFilter === t.status ? "Clear this filter" : `Show only ${currentData.statusLabels[t.status]} tasks`}">${currentData.statusLabels[t.status]}</button></td>
         <td>${t.dateReceived ? formatDisplayDate(t.dateReceived) : '<span class="text-muted-cell">—</span>'}</td>
         <td>${t.deadline ? formatDisplayDate(t.deadline) : '<span class="text-muted-cell">—</span>'}</td>
       </tr>`;
@@ -1704,6 +1708,10 @@ function renderTaskListTable() {
       </thead>
       <tbody>${rows}</tbody>
     </table>`;
+
+  wrap.querySelectorAll(".badge-btn").forEach((btn) => {
+    btn.addEventListener("click", () => toggleStatusFilter(btn.dataset.status));
+  });
 
   wrap.querySelectorAll(".owner-badge").forEach((btn) => {
     btn.addEventListener("click", (e) => {
