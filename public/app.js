@@ -1706,7 +1706,7 @@ function renderTaskListTable() {
       const teamCell = showTeamColumn ? `<td>${t.teamName}</td>` : "";
       return `
       <tr>
-        <td>${portalBadgeHTML(t.portal)}${escapeHTML(t.task)}${t.notes ? `<div class="task-note">${escapeHTML(t.notes)}</div>` : ""}</td>
+        <td>${portalBadgeHTML(t.portal)}<span class="task-title">${escapeHTML(t.task)}</span>${t.notes ? `<div class="task-note">${escapeHTML(t.notes)}</div>` : ""}</td>
         ${teamCell}
         <td>${ownerBadgesHTML(t.assignedTo)}</td>
         <td><button type="button" class="badge badge-btn ${t.status}${taskStatusFilter === t.status ? " active" : ""}" data-status="${t.status}" title="${taskStatusFilter === t.status ? "Clear this filter" : `Show only ${currentData.statusLabels[t.status]} tasks`}">${currentData.statusLabels[t.status]}</button></td>

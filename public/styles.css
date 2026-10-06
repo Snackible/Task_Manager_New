@@ -902,6 +902,7 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   outline-offset: -2px;
 }
 
+.task-title { font-weight: 700; }
 .task-note {
   margin-top: 4px;
   color: var(--text-secondary);
