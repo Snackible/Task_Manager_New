@@ -530,7 +530,29 @@ function syncSectionNav() {
     const target = document.getElementById(a.dataset.target);
     a.hidden = !target || target.hidden;
   });
+  updateActiveSection();
 }
+
+/** Highlights the rail icon of the section currently in view — the last
+ * visible section whose top has passed ~40% of the viewport height. */
+function updateActiveSection() {
+  const links = Array.from(document.querySelectorAll("#sectionNav a[data-target]")).filter((a) => !a.hidden);
+  let current = null;
+  for (const a of links) {
+    const el = document.getElementById(a.dataset.target);
+    if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.4) current = a;
+  }
+  links.forEach((a) => a.classList.toggle("active", a === current));
+}
+let sectionScrollQueued = false;
+window.addEventListener("scroll", () => {
+  if (sectionScrollQueued) return;
+  sectionScrollQueued = true;
+  requestAnimationFrame(() => {
+    sectionScrollQueued = false;
+    updateActiveSection();
+  });
+}, { passive: true });
 
 document.getElementById("sectionNav").addEventListener("click", (e) => {
   const a = e.target.closest("a[data-target]");

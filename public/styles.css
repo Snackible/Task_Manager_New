@@ -910,34 +910,68 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   white-space: pre-wrap;
 }
 
-/* Bookmark bar: jump links to each section, pinned to the top while
-   scrolling. Wraps instead of scrolling sideways on narrow screens. */
+/* Section rail: icon-only jump links pinned to the left edge, vertically
+   centred; the label slides out on hover. (Mobile layout is at the end of
+   this file so it wins the cascade over the .viz-root padding rules.) */
 .section-nav {
-  position: sticky;
-  top: 8px;
-  z-index: 20;
+  position: fixed;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 6px;
-  margin: 0 0 16px;
-  padding: 6px;
-  background: var(--panel-bg);
+  padding: 8px 6px;
+  background: color-mix(in srgb, var(--panel-bg) 88%, transparent);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 999px;
   box-shadow: var(--shadow);
 }
 .section-nav a {
-  padding: 6px 12px;
-  border-radius: 8px;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 600;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: var(--text-muted);
   text-decoration: none;
-  transition: background 0.12s var(--ease), color 0.12s var(--ease);
+  transition: background 0.15s var(--ease), color 0.15s var(--ease), transform 0.15s var(--ease);
 }
-.section-nav a:hover { background: var(--surface-2); color: var(--text-primary); }
+.section-nav a svg { width: 19px; height: 19px; }
+.section-nav a:hover { background: var(--surface-2); color: var(--text-primary); transform: scale(1.08); }
+.section-nav a.active {
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.section-nav a:focus-visible { outline: 2px solid var(--status-pending); outline-offset: 2px; }
 .section-nav a[hidden] { display: none; }
-.panel { scroll-margin-top: 72px; }
+.section-nav a::after {
+  content: attr(data-label);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translate(-4px, -50%);
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s var(--ease), transform 0.12s var(--ease);
+}
+.section-nav a:hover::after,
+.section-nav a:focus-visible::after { opacity: 1; transform: translate(0, -50%); }
+.panel { scroll-margin-top: 20px; }
 /* Which marketplace/portal a task is about (Ecomm only — see
    lib/ecommPlanner.js and portalBadgeHTML() in app.js). Matched to each
    platform's own brand colour where there's a recognizable one, so the
@@ -1466,3 +1500,23 @@ button.badge-btn.active { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 
   background: #25d366;
 }
 .btn-whatsapp:hover { background: #25d366; filter: brightness(1.08); }
+
+/* Section rail on narrower screens. Last in the file on purpose: it has to
+   beat the .viz-root padding rules above. Mid widths reserve a left gutter
+   so the rail never covers content; phones turn it into a floating bottom
+   pill instead. */
+@media (max-width: 1340px) and (min-width: 721px) {
+  .viz-root { padding-left: 76px; }
+}
+@media (max-width: 720px) {
+  .section-nav {
+    left: 50%;
+    top: auto;
+    bottom: 14px;
+    transform: translateX(-50%);
+    flex-direction: row;
+    padding: 6px 8px;
+  }
+  .section-nav a::after { display: none; }
+  .viz-root { padding-bottom: 96px; }
+}
