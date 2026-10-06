@@ -942,7 +942,8 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   transition: background 0.15s var(--ease), color 0.15s var(--ease), transform 0.15s var(--ease);
 }
 .section-nav a svg { width: 19px; height: 19px; }
-.section-nav a:hover { background: var(--surface-2); color: var(--text-primary); transform: scale(1.08); }
+.section-nav a:hover { background: var(--surface-2); color: var(--text-primary); }
+@media (hover: hover) { .section-nav a:hover { transform: scale(1.08); } }
 .section-nav a.active {
   color: var(--text-primary);
   background: var(--surface-2);
@@ -1512,11 +1513,14 @@ button.badge-btn.active { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 
   .section-nav {
     left: 50%;
     top: auto;
-    bottom: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-50%);
     flex-direction: row;
     padding: 6px 8px;
+    background: color-mix(in srgb, var(--panel-bg) 96%, transparent);
+    max-width: calc(100vw - 24px);
   }
+  .section-nav a { width: 44px; height: 44px; }
   .section-nav a::after { display: none; }
-  .viz-root { padding-bottom: 96px; }
+  .viz-root { padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
 }
