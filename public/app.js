@@ -1735,7 +1735,7 @@ function renderFooter(data) {
   const sheetCount = Object.keys(data.perSheet).length;
   const bits = [`${data.taskCount} tasks across ${sheetCount} sheets`];
   if (data.undated > 0) {
-    bits.push(`${data.undated} without a usable date (excluded from the weekly chart, still counted in totals)`);
+    bits.push(`${data.undated} without a date (hidden)`);
   }
   el.textContent = bits.join(" · ");
 }
