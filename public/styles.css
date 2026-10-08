@@ -20,29 +20,29 @@
      soft grey, panels sit just above it, and the ink is dark slate rather
      than black — still ~14:1 on panel, which is far past AA, just without
      the glare. */
-  --surface-1:      #f9f3e6;
-  --surface-2:      #eee2cb;
-  --page-plane:     #efe5d0;
-  --text-primary:   #2f2618;
-  --text-secondary: #5e5140;
-  --text-muted:     #75684f;
-  --gridline:       #e0d4ba;
-  --baseline:       #c8ba9b;
-  --border:         rgba(110,80,30,0.18);
-  --rule:           rgba(110,80,30,0.10);
-  --shadow:         0 1px 2px rgba(70,50,25,0.07), 0 8px 24px -16px rgba(70,50,25,0.22);
-  --shadow-hover:   0 1px 2px rgba(70,50,25,0.08), 0 16px 36px -18px rgba(70,50,25,0.28);
+  --surface-1:      #f6f8fb;
+  --surface-2:      #e3e9f1;
+  --page-plane:     #e8edf3;
+  --text-primary:   #1f2a39;
+  --text-secondary: #4a596c;
+  --text-muted:     #5e6e82;
+  --gridline:       #d6dee9;
+  --baseline:       #b9c6d6;
+  --border:         rgba(50,80,125,0.16);
+  --rule:           rgba(50,80,125,0.09);
+  --shadow:         0 1px 2px rgba(30,50,90,0.06), 0 8px 24px -16px rgba(30,50,90,0.20);
+  --shadow-hover:   0 1px 2px rgba(30,50,90,0.07), 0 16px 36px -18px rgba(30,50,90,0.26);
   --chip-tint-1:    rgba(42,120,214,0.12);
   --chip-tint-2:    rgba(74,58,167,0.12);
   --ease:           cubic-bezier(0.16, 1, 0.3, 1);
-  --panel-bg:       #f6eedd;
-  --panel-raised:   #ebe0c8;
+  --panel-bg:       #f0f4f8;
+  --panel-raised:   #e5ebf3;
   --glow-accent:    rgba(42,120,214,0.30);
-  --sheen:          rgba(255,248,226,0.6);
-  --ambient-1:      rgba(222,160,80,0.14);
-  --ambient-2:      rgba(222,160,80,0.08);
-  --ambient-3:      rgba(176,150,232,0.12);
-  --ambient-4:      rgba(240,186,130,0.14);
+  --sheen:          rgba(250,252,255,0.65);
+  --ambient-1:      rgba(90,150,235,0.09);
+  --ambient-2:      rgba(140,115,235,0.06);
+  --ambient-3:      rgba(70,170,225,0.07);
+  --ambient-4:      rgba(150,185,245,0.09);
 
   /* Large-area fills (chart bars, composition bar) — see the gradient defs
      in index.html. Deliberately a different, quieter set than the --status-*
@@ -739,6 +739,7 @@ body {
   color: var(--text-secondary);
   min-width: 0;
 }
+.legend[hidden] { display: none; }
 .legend .item {
   display: flex;
   align-items: center;
@@ -870,8 +871,8 @@ body {
   gap: 8px 12px;
   margin: 0 0 14px;
   padding: 10px 14px;
-  border: 1px solid color-mix(in srgb, var(--status-in-progress, #f5a623) 45%, var(--border));
-  background: color-mix(in srgb, var(--status-in-progress, #f5a623) 10%, var(--surface-1));
+  border: 1px solid color-mix(in srgb, var(--status-in-progress, #f5a623) 38%, var(--border));
+  background: color-mix(in srgb, var(--status-in-progress, #f5a623) 6%, var(--surface-1));
   border-radius: 12px;
   font-size: 13px;
 }
