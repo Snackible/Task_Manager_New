@@ -41,6 +41,8 @@
   --sheen:          rgba(255,248,226,0.6);
   --ambient-1:      rgba(222,160,80,0.14);
   --ambient-2:      rgba(222,160,80,0.08);
+  --ambient-3:      rgba(176,150,232,0.12);
+  --ambient-4:      rgba(240,186,130,0.14);
 
   /* Large-area fills (chart bars, composition bar) — see the gradient defs
      in index.html. Deliberately a different, quieter set than the --status-*
@@ -97,6 +99,8 @@
     --sheen:          rgba(255,255,255,0.05);
     --ambient-1:      rgba(144,133,233,0.16);
     --ambient-2:      rgba(144,133,233,0.08);
+    --ambient-3:      rgba(57,135,229,0.11);
+    --ambient-4:      rgba(45,212,191,0.06);
     --shadow-hover:   0 1px 2px rgba(5,4,16,0.55), 0 22px 48px -22px rgba(12,8,52,0.95);
     --chip-tint-1:    rgba(57,135,229,0.18);
     --chip-tint-2:    rgba(144,133,233,0.16);
@@ -127,6 +131,8 @@
     --sheen:          rgba(255,255,255,0.05);
     --ambient-1:      rgba(144,133,233,0.16);
     --ambient-2:      rgba(144,133,233,0.08);
+    --ambient-3:      rgba(57,135,229,0.11);
+    --ambient-4:      rgba(45,212,191,0.06);
   --shadow-hover:   0 1px 2px rgba(5,4,16,0.55), 0 22px 48px -22px rgba(12,8,52,0.95);
   --chip-tint-1:    rgba(57,135,229,0.18);
   --chip-tint-2:    rgba(144,133,233,0.16);
@@ -188,27 +194,12 @@ body {
      graph paper under an instrument, costs no hue, and gives the flat panels
      something to sit on so they don't float in void. */
   background-image:
-    radial-gradient(900px 520px at 8% -10%, var(--ambient-1), transparent 70%),
-    radial-gradient(760px 460px at 98% 4%, var(--ambient-2), transparent 70%);
+    radial-gradient(1000px 620px at 6% -8%, var(--ambient-1), transparent 70%),
+    radial-gradient(860px 560px at 100% 4%, var(--ambient-2), transparent 70%),
+    radial-gradient(1000px 700px at 94% 104%, var(--ambient-3), transparent 70%),
+    radial-gradient(800px 600px at -6% 82%, var(--ambient-4), transparent 70%);
   background-attachment: fixed;
   color: var(--text-primary);
-}
-
-/* Background texture: fine diagonal hatching, like an engraving — strongest
-   in the top-left corner and fading out across the page. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--text-primary) 9%, transparent) 0 1px,
-    transparent 1px 11px
-  );
-  -webkit-mask-image: linear-gradient(160deg, #000 0%, rgba(0,0,0,0.35) 38%, transparent 70%);
-  mask-image: linear-gradient(160deg, #000 0%, rgba(0,0,0,0.35) 38%, transparent 70%);
 }
 
 /* Staggered entrance: each top-level block rises in a beat after the one
