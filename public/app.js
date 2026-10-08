@@ -3,6 +3,15 @@
 // statusUtils.js: blank used to silently become "pending," which hid that
 // gap entirely).
 const STATUS_ORDER = ["completed", "in_progress", "awaiting_approval", "pending", "overdue", "no_status"];
+// 24x24 stroke glyphs for each status card's icon chip.
+const STATUS_ICON = {
+  completed: '<path d="M20 6 9 17l-5-5"/>',
+  in_progress: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  awaiting_approval: '<path d="M7 3h10v4l-5 5 5 5v4H7v-4l5-5-5-5z"/>',
+  pending: '<circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/>',
+  overdue: '<path d="M12 3 2.5 20h19L12 3z"/><path d="M12 10v4M12 17.4v.1"/>',
+  no_status: '<circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><path d="M9 12h6"/>',
+};
 const STATUS_COLOR = {
   no_status: "var(--status-no-status)",
   overdue: "var(--status-overdue)",
@@ -398,6 +407,68 @@ function renderMissingNotice(data) {
   el.hidden = false;
 }
 
+// Last number shown per slot, so a count that changes (new tab, new period,
+// refresh) rolls from the old value to the new one instead of snapping.
+const lastShownCount = {};
+function rollNumber(el, key, to, format = (n) => String(n)) {
+  const from = lastShownCount[key] ?? 0;
+  lastShownCount[key] = to;
+  if (from === to || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    el.textContent = format(to);
+    return;
+  }
+  const start = performance.now();
+  const duration = 750;
+  const tick = (now) => {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = format(Math.round(from + (to - from) * eased));
+    if (t < 1 && el.isConnected) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+/** Completion waffle: a 10x10 grid where every square is 1% of the tasks,
+ * filled in status order (completed first) in the same colours as the cards
+ * beside it. */
+function renderHero(view) {
+  const el = document.getElementById("heroCard");
+  const total = STATUS_ORDER.reduce((sum, s) => sum + (view.totals[s] || 0), 0);
+  const done = view.totals.completed || 0;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+
+  // Largest-remainder rounding so the 100 squares always add up exactly.
+  const cells = [];
+  if (total) {
+    const raw = STATUS_ORDER.map((s) => ({ s, exact: ((view.totals[s] || 0) / total) * 100 }));
+    raw.forEach((r) => (r.n = Math.floor(r.exact)));
+    let left = 100 - raw.reduce((sum, r) => sum + r.n, 0);
+    [...raw].sort((a, b) => b.exact - b.n - (a.exact - a.n)).forEach((r) => {
+      if (left > 0 && r.exact > 0) { r.n++; left--; }
+    });
+    raw.forEach((r) => { for (let i = 0; i < r.n; i++) cells.push(r.s); });
+  }
+  const squares = Array.from({ length: 100 }, (_, i) => {
+    const s = cells[i];
+    const label = s ? currentData.statusLabels[s] : "No tasks";
+    return `<i class="waffle-cell${s ? "" : " is-empty"}" style="--i:${i}${s ? `;background:${STATUS_COLOR[s]}` : ""}" title="${escapeHTML(label)}"></i>`;
+  }).join("");
+
+  const rangeSelect = document.getElementById("dateRangeSelect");
+  const rangeText = rangeSelect && rangeSelect.selectedOptions[0] ? rangeSelect.selectedOptions[0].textContent : "";
+  el.innerHTML = `
+    <div class="hero-top">
+      <span class="hero-pct"><span class="hero-pct-num">${total ? pct : "—"}</span>${total ? "<small>%</small>" : ""}</span>
+      <span class="hero-pct-label">complete</span>
+    </div>
+    <div class="waffle" role="img" aria-label="${pct}% of ${total} tasks complete">${squares}</div>
+    <div class="hero-meta">
+      <span class="hero-kicker">${escapeHTML(view.label)} · ${escapeHTML(rangeText)}</span>
+      <span class="hero-count"><b>${fmt(done)}</b> of ${fmt(total)} tasks done</span>
+    </div>`;
+  if (total) rollNumber(el.querySelector(".hero-pct-num"), "hero-pct", pct);
+}
+
 function showTileTooltip(evt, status) {
   const tip = document.getElementById("tileTooltip");
   const teams = teamTotalsForView(currentData).sort((a, b) => b.totals[status] - a.totals[status]);
@@ -484,6 +555,7 @@ function renderScopedContent(data) {
   const view = scopedView(data);
 
   renderMissingNotice(data);
+  renderHero(view);
   renderStatTiles(view);
   renderLegend(data);
   renderSeriesChart(view.series);
@@ -553,6 +625,15 @@ window.addEventListener("scroll", () => {
     updateActiveSection();
   });
 }, { passive: true });
+
+// Spotlight glow on the stat tiles follows the cursor (see .stat-tile:hover).
+document.getElementById("statRow").addEventListener("mousemove", (e) => {
+  const tile = e.target.closest(".stat-tile");
+  if (!tile) return;
+  const r = tile.getBoundingClientRect();
+  tile.style.setProperty("--mx", `${e.clientX - r.left}px`);
+  tile.style.setProperty("--my", `${e.clientY - r.top}px`);
+});
 
 document.getElementById("sectionNav").addEventListener("click", (e) => {
   const a = e.target.closest("a[data-target]");
@@ -1032,13 +1113,17 @@ function renderStatTiles(view) {
       tile.addEventListener("blur", hideTileTooltip);
     }
     tile.innerHTML = `
-      <div class="label"><span class="swatch" style="background:${STATUS_COLOR[status]}"></span>${label}</div>
+      <div class="label">
+        <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${STATUS_ICON[status]}</svg></span>
+        <span class="label-text">${label}</span>
+      </div>
       <div class="value-row">
         <div class="value">${fmt(total)}</div>
         ${sparklineSVG(view.series, status)}
       </div>
       <div class="sub">${deltaSub(view, status)}</div>
     `;
+    rollNumber(tile.querySelector(".value"), "tile-" + status, total, fmt);
     tile.addEventListener("click", () => toggleStatTileFilter(status));
     tile.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
@@ -1128,104 +1213,59 @@ function renderLegend(data) {
 }
 
 /** One period has no trend to show — the only question it can answer is what
- * that period is made of. A vertical bar chart answers it badly: the single
- * column sits marooned in a wide plot, the y-axis rounds up past the value
- * (119 became a 0–200 scale, so the bar reached 60% height), and small
- * statuses collapse into unreadable slivers. A full-width composition bar
- * answers the same question with every segment legible and no dead space. */
-function renderCompositionBar(svg, period, width, height) {
-  const marginX = 2;
+ * that period is made of. So it gets a slim segmented track plus a plain
+ * readout per status, instead of a lone bar marooned in a wide plot. */
+function ensureCompWrap(svg) {
+  let comp = document.getElementById("compWrap");
+  if (!comp) {
+    comp = document.createElement("div");
+    comp.id = "compWrap";
+    svg.parentElement.insertBefore(comp, svg);
+  }
+  return comp;
+}
+
+function renderCompositionBlock(comp, svg, period) {
+  svg.style.display = "none";
+  comp.hidden = false;
   const total = STATUS_ORDER.reduce((sum, s) => sum + (period[s] || 0), 0);
   if (total === 0) {
-    const text = svgEl("text", { x: width / 2, y: height / 2, "text-anchor": "middle", class: "axis-label" });
-    text.textContent = "No dated tasks in this period";
-    svg.appendChild(text);
+    comp.innerHTML = `<p class="empty-note">No dated tasks in this period</p>`;
     return;
   }
-
-  const barH = 54;
-  const barY = 46;
-  const barW = width - marginX * 2;
-  const radius = 10;
-  // Wide enough that adjacent fills read as separate blocks rather than
-  // vibrating against each other where they meet.
-  const gap = 4;
-
-  const caption = svgEl("text", { x: marginX, y: 22, class: "comp-total" });
-  caption.textContent = fmt(total);
-  svg.appendChild(caption);
-
-  const sub = svgEl("text", { x: marginX + String(total).length * 13 + 8, y: 22, class: "axis-label" });
-  sub.textContent = `tasks · ${period.label}`;
-  svg.appendChild(sub);
-
-  // Rounded ends without rounding every internal segment: clip the whole
-  // run of square segments to one rounded rect.
-  const clipId = "compClip";
-  const defs = svgEl("defs", {});
-  const clip = svgEl("clipPath", { id: clipId });
-  clip.appendChild(svgEl("rect", { x: marginX, y: barY, width: barW, height: barH, rx: radius }));
-  defs.appendChild(clip);
-  svg.appendChild(defs);
-
-  const group = svgEl("g", { "clip-path": `url(#${clipId})`, class: "comp-bar" });
-  let x = marginX;
-  STATUS_ORDER.forEach((status) => {
-    const val = period[status] || 0;
-    if (val <= 0) return;
-    const segW = (val / total) * barW;
-    const rect = svgEl("rect", {
-      x,
-      y: barY,
-      width: Math.max(0, segW - gap),
-      height: barH,
-      fill: `url(#${STATUS_GRADIENT_ID[status]})`,
-      class: "comp-seg",
-    });
-    rect.dataset.status = status;
-    rect.addEventListener("mousemove", (e) => showTooltip(e, period));
-    rect.addEventListener("mouseleave", hideTooltip);
-    group.appendChild(rect);
-
-    // The count rides inside its own segment when there's room for it —
-    // dark ink, which clears 4.5:1 on all five status fills.
-    if (segW > 38) {
-      const label = svgEl("text", {
-        x: x + (segW - gap) / 2,
-        y: barY + barH / 2 + 5,
-        "text-anchor": "middle",
-        class: "comp-seg-label",
-      });
-      label.textContent = fmt(val);
-      group.appendChild(label);
-    }
-    x += segW;
-  });
-  svg.appendChild(group);
-
-  // Share of total under each segment wide enough to caption, so the bar
-  // reads as proportions and not just coloured lengths.
-  let lx = marginX;
-  STATUS_ORDER.forEach((status) => {
-    const val = period[status] || 0;
-    if (val <= 0) return;
-    const segW = (val / total) * barW;
-    if (segW > 64) {
-      const pct = svgEl("text", {
-        x: lx + (segW - gap) / 2,
-        y: barY + barH + 18,
-        "text-anchor": "middle",
-        class: "axis-label",
-      });
-      pct.textContent = `${Math.round((val / total) * 100)}%`;
-      svg.appendChild(pct);
-    }
-    lx += segW;
+  const present = STATUS_ORDER.filter((s) => (period[s] || 0) > 0);
+  const segs = present
+    .map(
+      (s, i) =>
+        `<span data-status="${s}" style="flex:${period[s]};--c:${STATUS_COLOR[s]};--i:${i}" title="${escapeHTML(currentData.statusLabels[s])}: ${period[s]}"></span>`
+    )
+    .join("");
+  const cols = STATUS_ORDER.map((s) => {
+    const n = period[s] || 0;
+    return `<div class="comp-col${n ? "" : " is-zero"}" style="--c:${STATUS_COLOR[s]}">
+      <span class="name"><i class="dot"></i>${escapeHTML(currentData.statusLabels[s])}</span>
+      <span class="num">${fmt(n)}</span>
+      <span class="pct">${Math.round((n / total) * 100)}%</span>
+    </div>`;
+  }).join("");
+  comp.innerHTML = `
+    <div class="comp-head"><span class="comp-total">${fmt(total)}</span><span class="comp-sub">tasks · ${escapeHTML(period.label)}</span></div>
+    <div class="comp-track">${segs}</div>
+    <div class="comp-cols">${cols}</div>`;
+  comp.querySelectorAll(".comp-track span").forEach((seg) => {
+    seg.addEventListener("mousemove", (e) => showTooltip(e, period));
+    seg.addEventListener("mouseleave", hideTooltip);
   });
 }
 
 function renderSeriesChart(series) {
   const svg = document.getElementById("weeklyChart");
+  const comp = ensureCompWrap(svg);
+  comp.hidden = true;
+  svg.style.display = "";
+  // The single-period breakdown carries its own per-status readout, so the
+  // legend chips would just repeat it.
+  document.getElementById("chartLegend").hidden = series.length === 1;
   const width = svg.parentElement.clientWidth || 800;
   // A wall-to-wall 280px chart around one lonely bar reads as broken, not
   // minimal — scale the canvas down when there's little to show.
@@ -1252,7 +1292,7 @@ function renderSeriesChart(series) {
   }
 
   if (series.length === 1) {
-    renderCompositionBar(svg, series[0], width, height);
+    renderCompositionBlock(comp, svg, series[0]);
     return;
   }
 
@@ -1307,7 +1347,7 @@ function renderSeriesChart(series) {
   // Sparse series get chunkier bars — a 32px bar under a full-width axis
   // looks like a stray tick rather than the subject of the chart.
   const barW = Math.min(series.length <= 3 ? 68 : 32, bandW * 0.5);
-  const gap = 2;
+  const gap = 3;
   // With many bars (dense daily views), a label on every one overlaps its
   // neighbors — thin them out so only every Nth bar is labeled, based on how
   // much horizontal room a label like "Aug 10" actually needs (~6 chars).
@@ -1316,24 +1356,39 @@ function renderSeriesChart(series) {
 
   series.forEach((period, i) => {
     const cx = plotOffsetX + bandW * i + bandW / 2;
+    const col = svgEl("g", { class: "bar-col" });
+    svg.appendChild(col);
+
+    // Full-height invisible hit area so a column is easy to hover, and so the
+    // whole band can light up.
+    const hit = svgEl("rect", {
+      x: cx - bandW / 2,
+      y: marginTop - 16,
+      width: bandW,
+      height: plotH + 22,
+      rx: 12,
+      class: "bar-hit",
+    });
+    hit.addEventListener("mousemove", (e) => showTooltip(e, period));
+    hit.addEventListener("mouseleave", hideTooltip);
+    col.appendChild(hit);
+
     let yCursor = marginTop + plotH; // bottom, we stack upward
     const total = STATUS_ORDER.reduce((sum, s) => sum + (period[s] || 0), 0);
 
-    STATUS_ORDER.forEach((status, si) => {
+    STATUS_ORDER.forEach((status) => {
       const val = period[status] || 0;
       if (val <= 0) return;
       const segH = (val / niceMax) * plotH;
-      const isTop = STATUS_ORDER.slice(si + 1).every((s) => (period[s] || 0) === 0);
-      const y = yCursor - segH;
-      const rectGap = si === 0 ? 0 : gap / 2;
+      const h = Math.max(2, segH - gap);
 
       const rect = svgEl("rect", {
         x: cx - barW / 2,
-        y: y,
+        y: yCursor - segH + gap / 2,
         width: barW,
-        height: Math.max(0, segH - (isTop ? 0 : gap / 2) - rectGap),
+        height: h,
         fill: `url(#${STATUS_GRADIENT_ID[status]})`,
-        rx: isTop ? 6 : 0,
+        rx: Math.min(6, h / 2),
         class: "bar-seg",
       });
       rect.style.animationDelay = `${i * 35}ms`;
@@ -1341,26 +1396,20 @@ function renderSeriesChart(series) {
       rect.dataset.status = status;
       rect.addEventListener("mousemove", (e) => showTooltip(e, period));
       rect.addEventListener("mouseleave", hideTooltip);
-      svg.appendChild(rect);
+      col.appendChild(rect);
 
       yCursor -= segH;
     });
 
-    // Columns get their value on the cap (marks-and-anatomy.md) — plain ink,
-    // never the segment color, and skipped if it would clip past the top edge.
+    // Columns get their value on the cap — plain ink, never the segment
+    // colour, and skipped if it would clip past the top edge.
     if (total > 0) {
-      const topY = yCursor;
-      const valueY = topY - 8;
+      const valueY = yCursor - 8;
       if (valueY > 10) {
-        const valueLabel = svgEl("text", {
-          x: cx,
-          y: valueY,
-          "text-anchor": "middle",
-          class: "bar-value-label",
-        });
+        const valueLabel = svgEl("text", { x: cx, y: valueY, "text-anchor": "middle", class: "bar-value-label" });
         valueLabel.textContent = fmt(total);
         valueLabel.style.animationDelay = `${i * 35 + 200}ms`;
-        svg.appendChild(valueLabel);
+        col.appendChild(valueLabel);
       }
     }
 
@@ -1370,10 +1419,10 @@ function renderSeriesChart(series) {
         x: cx,
         y: height - 6,
         "text-anchor": "middle",
-        class: "axis-label",
+        class: "axis-label" + (isLastBar ? " is-current" : ""),
       });
       label.textContent = shortAxisLabel(period.label);
-      svg.appendChild(label);
+      col.appendChild(label);
     }
   });
 }
@@ -1601,10 +1650,7 @@ function allOwnerNames() {
   const names = new Set();
   for (const t of taskListData) {
     if (!t.assignedTo) continue;
-    for (const name of t.assignedTo.split(",")) {
-      const trimmed = name.trim();
-      if (trimmed) names.add(trimmed);
-    }
+    for (const name of splitOwners(t.assignedTo)) names.add(name);
   }
   return Array.from(names).sort((a, b) => a.localeCompare(b));
 }
@@ -1614,12 +1660,19 @@ function allOwnerNames() {
 // a plain span. `stopPropagation` on the click listener (wired up after
 // render, alongside the note-toggle listeners) keeps this from also
 // triggering the row's own click-to-expand-notes handler.
-function ownerBadgesHTML(assignedTo) {
-  if (!assignedTo) return '<span class="text-muted-cell">—</span>';
-  const names = assignedTo
-    .split(",")
+// "Bhargavi & Hiral", "A, B", "A / B" and "A and B" all mean several people —
+// each gets their own chip (and their own owner-filter entry) instead of one
+// wide pill that wraps onto two lines.
+function splitOwners(raw) {
+  return String(raw || "")
+    .split(/\s*(?:,|&|\/|\band\b)\s*/i)
     .map((n) => n.trim())
     .filter(Boolean);
+}
+
+function ownerBadgesHTML(assignedTo) {
+  if (!assignedTo) return '<span class="text-muted-cell">—</span>';
+  const names = splitOwners(assignedTo);
   return names
     .map((name) => {
       const active = taskOwnerFilters.has(name);
@@ -1644,7 +1697,7 @@ function filteredTaskList() {
     if (currentSubTab && t.subTab !== currentSubTab) return false;
     if (taskStatusFilter && t.status !== taskStatusFilter) return false;
     if (taskOwnerFilters.size > 0) {
-      const names = t.assignedTo ? t.assignedTo.split(",").map((n) => n.trim()) : [];
+      const names = splitOwners(t.assignedTo);
       if (!names.some((n) => taskOwnerFilters.has(n))) return false;
     }
     if (q && !t.task.toLowerCase().includes(q)) return false;

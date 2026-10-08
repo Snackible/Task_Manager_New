@@ -4,10 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Task Tracker Dashboard</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='16' width='6' height='13' rx='1.5' fill='%232a78d6'/%3E%3Crect x='13' y='9' width='6' height='20' rx='1.5' fill='%23fab219'/%3E%3Crect x='23' y='3' width='6' height='26' rx='1.5' fill='%230ca30c'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2040%2040'%3E%3Crect%20width%3D'40'%20height%3D'40'%20rx%3D'11'%20fill%3D'%2312141c'%2F%3E%3Ccircle%20cx%3D'20'%20cy%3D'20'%20r%3D'12'%20fill%3D'none'%20stroke%3D'%233a3f4d'%20stroke-width%3D'3.6'%2F%3E%3Ccircle%20cx%3D'20'%20cy%3D'20'%20r%3D'12'%20fill%3D'none'%20stroke%3D'%239085e9'%20stroke-width%3D'3.6'%20stroke-linecap%3D'round'%20stroke-dasharray%3D'55%2020.4'%20transform%3D'rotate(-90%2020%2020)'%2F%3E%3Cpath%20d%3D'M14.8%2020.6l3.8%203.8%206.8-8'%20fill%3D'none'%20stroke%3D'%23f2f4f7'%20stroke-width%3D'3'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3C%2Fsvg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/styles.css" />
 <script>
   // Applied before first paint so a saved light theme doesn't flash dark
@@ -63,7 +63,13 @@
   <div class="viz-root" id="app">
     <header class="page-header">
       <div class="brand-row">
-        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="12" fill="none" stroke-width="3.6" style="stroke:var(--text-primary)" opacity="0.14"/>
+          <circle cx="20" cy="20" r="12" fill="none" stroke-width="3.6" stroke-linecap="round" style="stroke:var(--accent-violet)" stroke-dasharray="55 20.4" transform="rotate(-90 20 20)"/>
+          <path d="M14.8 20.6l3.8 3.8 6.8-8" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--text-primary)"/>
+        </svg>
+      </div>
         <h1>Task Tracker Dashboard</h1>
       </div>
       <div class="header-actions">
@@ -122,9 +128,14 @@
 
     <div class="period-notice" id="periodNotice" role="status" hidden></div>
 
-    <section class="stat-row" id="statRow" aria-label="Current totals">
-      <!-- stat tiles injected by app.js -->
-    </section>
+    <div class="overview">
+      <section class="hero-card" id="heroCard" aria-label="Overall progress">
+        <!-- ring + completion rate injected by app.js -->
+      </section>
+      <section class="stat-row" id="statRow" aria-label="Current totals">
+        <!-- stat tiles injected by app.js -->
+      </section>
+    </div>
     <div id="tileTooltip" class="tooltip tile-tooltip" hidden></div>
 
     <section class="panel" id="tasksPanel">
