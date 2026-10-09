@@ -39,10 +39,9 @@
   --panel-raised:   #e5ebf3;
   --glow-accent:    rgba(42,120,214,0.30);
   --sheen:          rgba(250,252,255,0.65);
-  --ambient-1:      rgba(90,150,235,0.09);
-  --ambient-2:      rgba(140,115,235,0.06);
-  --ambient-3:      rgba(70,170,225,0.07);
-  --ambient-4:      rgba(150,185,245,0.09);
+  --spot-1:         rgba(74,58,167,0.11);
+  --spot-2:         rgba(90,150,235,0.10);
+  --vignette:       rgba(30,50,90,0.07);
 
   /* Large-area fills (chart bars, composition bar) — see the gradient defs
      in index.html. Deliberately a different, quieter set than the --status-*
@@ -97,10 +96,9 @@
     --rule:           rgba(255,255,255,0.06);
     --shadow:         0 1px 2px rgba(5,4,16,0.5), 0 14px 36px -22px rgba(10,6,40,0.9);
     --sheen:          rgba(255,255,255,0.05);
-    --ambient-1:      rgba(144,133,233,0.16);
-    --ambient-2:      rgba(144,133,233,0.08);
-    --ambient-3:      rgba(57,135,229,0.11);
-    --ambient-4:      rgba(45,212,191,0.06);
+    --spot-1:         rgba(144,133,233,0.22);
+    --spot-2:         rgba(186,178,255,0.12);
+    --vignette:       rgba(0,0,0,0.5);
     --shadow-hover:   0 1px 2px rgba(5,4,16,0.55), 0 22px 48px -22px rgba(12,8,52,0.95);
     --chip-tint-1:    rgba(57,135,229,0.18);
     --chip-tint-2:    rgba(144,133,233,0.16);
@@ -129,10 +127,9 @@
   --rule:           rgba(255,255,255,0.06);
   --shadow:         0 1px 2px rgba(5,4,16,0.5), 0 14px 36px -22px rgba(10,6,40,0.9);
     --sheen:          rgba(255,255,255,0.05);
-    --ambient-1:      rgba(144,133,233,0.16);
-    --ambient-2:      rgba(144,133,233,0.08);
-    --ambient-3:      rgba(57,135,229,0.11);
-    --ambient-4:      rgba(45,212,191,0.06);
+    --spot-1:         rgba(144,133,233,0.22);
+    --spot-2:         rgba(186,178,255,0.12);
+    --vignette:       rgba(0,0,0,0.5);
   --shadow-hover:   0 1px 2px rgba(5,4,16,0.55), 0 22px 48px -22px rgba(12,8,52,0.95);
   --chip-tint-1:    rgba(57,135,229,0.18);
   --chip-tint-2:    rgba(144,133,233,0.16);
@@ -194,10 +191,9 @@ body {
      graph paper under an instrument, costs no hue, and gives the flat panels
      something to sit on so they don't float in void. */
   background-image:
-    radial-gradient(1000px 620px at 6% -8%, var(--ambient-1), transparent 70%),
-    radial-gradient(860px 560px at 100% 4%, var(--ambient-2), transparent 70%),
-    radial-gradient(1000px 700px at 94% 104%, var(--ambient-3), transparent 70%),
-    radial-gradient(800px 600px at -6% 82%, var(--ambient-4), transparent 70%);
+    radial-gradient(ellipse 72% 46% at 50% -14%, var(--spot-1), transparent 72%),
+    radial-gradient(ellipse 34% 26% at 50% -6%, var(--spot-2), transparent 70%),
+    radial-gradient(ellipse 125% 95% at 50% 35%, transparent 58%, var(--vignette) 100%);
   background-attachment: fixed;
   color: var(--text-primary);
 }
@@ -260,6 +256,8 @@ body {
   margin: 0;
   color: var(--text-primary);
 }
+.brand-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.header-date { margin: 0; font-size: 13px; color: var(--text-muted); }
 .subtitle {
   margin: 0;
   color: var(--text-secondary);
@@ -913,6 +911,7 @@ table.data-table th, table.data-table td {
   border-bottom: 1px solid var(--rule);
 }
 table.data-table th {
+  white-space: nowrap;
   font-family: var(--font-display);
   color: var(--text-muted);
   font-weight: 500;
@@ -962,6 +961,8 @@ td.row-go svg { width: 16px; height: 16px; display: block; opacity: 0; transform
 }
 
 .task-title { font-weight: 700; }
+.task-date { color: var(--text-secondary); white-space: nowrap; }
+.task-date.is-near { color: var(--text-primary); font-weight: 600; }
 .task-note {
   margin-top: 4px;
   color: var(--text-secondary);
@@ -1481,40 +1482,45 @@ button.badge-btn.active { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 
 
 /* ---- Reminders (WhatsApp deep-link) ---- */
 .reminder-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 12px;
 }
-/* Deliberately uncoloured. These were three tinted, glowing, gradient-
- * chipped cards in amber / blue / green — but they're three instances of
- * one action, so the colour coded nothing while spending the exact hues
- * that mean "in progress", "pending" and "completed" everywhere else on
- * the page. The icon and label already tell them apart. */
+/* Each reminder is an action card: what it is, who it nudges, and a send
+   glyph that turns WhatsApp-green on hover (that's where it opens). */
 .btn-reminder {
-  flex: 0 1 auto;
-  flex-shrink: 0;
-  white-space: nowrap;
-  min-width: 215px;
+  min-width: 0;
+  white-space: normal;
   justify-content: flex-start;
-  gap: 11px;
-  padding: 9px 18px 9px 9px;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 16px 14px 14px;
+  border-radius: 14px;
+  text-align: left;
   background: var(--surface-1);
+}
+.btn-reminder:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent-violet) 45%, var(--border));
+  box-shadow: var(--shadow-hover);
 }
 .reminder-icon-chip {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
   flex: none;
-  background: var(--panel-raised);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  transition: color 0.2s var(--ease);
+  background: color-mix(in srgb, var(--accent-violet) 14%, transparent);
+  color: var(--accent-violet);
 }
-.reminder-icon-chip svg { width: 16px; height: 16px; }
-.btn-reminder:hover .reminder-icon-chip { color: var(--text-primary); }
+.reminder-icon-chip svg { width: 17px; height: 17px; }
+.reminder-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.reminder-text strong { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.reminder-text small { font-family: var(--font-body); font-size: 12.5px; font-weight: 400; color: var(--text-muted); line-height: 1.4; }
+.reminder-go { width: 16px; height: 16px; flex: none; color: var(--text-muted); transition: color 0.2s var(--ease), transform 0.2s var(--ease); }
+.btn-reminder:hover .reminder-go { color: #25d366; transform: translate(2px, -2px); }
 
 .modal-overlay {
   position: fixed;
@@ -1685,4 +1691,24 @@ button.badge-btn.active { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 
   .hero-card { gap: 8px 16px; padding: 16px; grid-template-columns: 1fr minmax(100px, 140px); }
   .hero-pct { font-size: 40px; }
   .waffle { gap: 3px; }
+}
+
+/* Team tabs + period picker ride along as a frosted toolbar while you scroll,
+   so switching team never means scrolling back up. Phones keep the normal
+   stacked layout — a sticky two-row bar would eat too much of the screen. */
+@media (min-width: 641px) {
+  .control-row {
+    position: sticky;
+    top: 10px;
+    z-index: 25;
+    padding: 6px 10px 6px 6px;
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--panel-bg) 74%, transparent);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 0 var(--sheen), var(--shadow);
+  }
+  .control-row .tab-bar { background: transparent; border-color: transparent; padding: 0; }
+  .control-row .tab-indicator { top: 0; bottom: 0; left: 0; }
 }

@@ -247,6 +247,17 @@ const MONTH_NAMES_SHORT = [
 
 // "2026-08-20" -> "20 August" — leading with the year read backwards to
 // scan; day-then-month-in-words is how these get read out loud.
+/** Task-list date: "Today" / "Yesterday" / "Tomorrow" when it's that close,
+ * otherwise the short date — the full weekday + date sits in the tooltip. */
+function formatTaskDate(isoStr) {
+  const d = new Date(`${isoStr}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return escapeHTML(isoStr);
+  const diff = Math.round((d.getTime() - localToday().getTime()) / 86400000);
+  const rel = diff === 0 ? "Today" : diff === -1 ? "Yesterday" : diff === 1 ? "Tomorrow" : null;
+  const full = d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  return `<span class="task-date${rel ? " is-near" : ""}" title="${full}">${rel || formatDisplayDate(isoStr)}</span>`;
+}
+
 function formatDisplayDate(isoStr) {
   if (!isoStr) return "";
   const parts = isoStr.split("-");
@@ -1783,8 +1794,8 @@ function renderTaskListTable() {
         ${teamCell}
         <td>${ownerBadgesHTML(t.assignedTo)}</td>
         <td><button type="button" class="badge badge-btn ${t.status}${taskStatusFilter === t.status ? " active" : ""}" data-status="${t.status}" title="${taskStatusFilter === t.status ? "Clear this filter" : `Show only ${currentData.statusLabels[t.status]} tasks`}">${currentData.statusLabels[t.status]}</button></td>
-        <td>${t.dateReceived ? formatDisplayDate(t.dateReceived) : '<span class="text-muted-cell">—</span>'}</td>
-        <td>${t.deadline ? formatDisplayDate(t.deadline) : '<span class="text-muted-cell">—</span>'}</td>
+        <td>${t.dateReceived ? formatTaskDate(t.dateReceived) : '<span class="text-muted-cell">—</span>'}</td>
+        <td>${t.deadline ? formatTaskDate(t.deadline) : '<span class="text-muted-cell">—</span>'}</td>
       </tr>`;
     })
     .join("");
@@ -1795,9 +1806,9 @@ function renderTaskListTable() {
         <tr>
           <th>Task</th>
           ${showTeamColumn ? "<th>Team</th>" : ""}
-          <th>Assigned To</th>
+          <th>Assigned to</th>
           <th>Status</th>
-          <th>Date Received</th>
+          <th>Received</th>
           <th>Deadline</th>
         </tr>
       </thead>
@@ -2153,3 +2164,17 @@ loadData()
     hideLoadingOverlay();
   });
 loadReminderNumbersFromServer(); // independent of the dashboard data load above — reminder numbers aren't part of it
+
+// "Saturday, 10 October · Week 41" under the page title (ISO week number).
+function renderHeaderDate() {
+  const el = document.getElementById("headerDate");
+  if (!el) return;
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const isoDay = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - isoDay);
+  const yearStart = Date.UTC(d.getUTCFullYear(), 0, 1);
+  const week = Math.ceil(((d.getTime() - yearStart) / 86400000 + 1) / 7);
+  el.textContent = `${now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })} · Week ${week}`;
+}
+renderHeaderDate();
