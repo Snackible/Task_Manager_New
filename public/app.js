@@ -60,10 +60,14 @@ function portalSlug(name) {
 // starts using the same field) still gets a badge — just the neutral
 // fallback class instead of a bespoke brand colour — rather than silently
 // rendering unstyled text.
+// Clicking a marketplace badge filters the task list to that portal (click
+// again to clear), same idea as the status badges.
 function portalBadgeHTML(portal) {
   if (!portal) return "";
   const cls = PORTAL_SLUG_CLASS[portalSlug(portal)] || "portal-other";
-  return `<span class="portal-badge ${cls}">${escapeHTML(portal)}</span>`;
+  const active = taskPortalFilter === portal;
+  const title = active ? "Clear this filter" : `Show only ${portal} tasks`;
+  return `<button type="button" class="portal-badge ${cls}${active ? " active" : ""}" data-portal="${escapeHTML(portal)}" title="${escapeHTML(title)}">${escapeHTML(portal)}</button>`;
 }
 
 function resolveColors() {
@@ -140,8 +144,7 @@ function render(data) {
   populateDaySelect(data);
   loadTaskList(currentScope);
 
-  const dt = new Date(data.generatedAt);
-  document.getElementById("updatedAt").textContent = `Updated ${dt.toLocaleString()}`;
+  showUpdatedAt(data.generatedAt);
 }
 
 /** Silent refresh for the 30s auto-poll: updates counts/chart/task list but
@@ -157,8 +160,14 @@ function silentRefresh(data) {
   populateDaySelect(data);
   loadTaskList(currentScope);
 
-  const dt = new Date(data.generatedAt);
-  document.getElementById("updatedAt").textContent = `Updated ${dt.toLocaleString()}`;
+  showUpdatedAt(data.generatedAt);
+}
+
+function showUpdatedAt(iso) {
+  const dt = new Date(iso);
+  const el = document.getElementById("updatedAt");
+  el.textContent = `Updated ${dt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  el.title = dt.toLocaleString();
 }
 
 function isoWeekStartClient(date) {
@@ -515,11 +524,11 @@ function renderTabs(data) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "tab-btn" + (tab.key === currentScope ? " active" : "");
-    // "Total" spans every source at once, so it gets no single dot to show —
-    // only per-team tabs have one source to report on.
+    // Only a team whose sheet ISN'T loading live gets a dot — a dot on every
+    // tab said nothing. "Total" spans every source, so it never gets one.
     const dot =
       tab.source === "live"
-        ? '<span class="tab-availability-dot is-live" title="Live data"></span>'
+        ? ""
         : tab.source
           ? '<span class="tab-availability-dot is-offline" title="Demo or no live data"></span>'
           : "";
@@ -702,7 +711,10 @@ function showReportEmptyState(scopeLabel) {
   document.getElementById("reportBody").innerHTML = `
     <div class="report-empty">
       <div class="report-empty-icon">${REPORT_EMPTY_ICON_SVG}</div>
-      <p>${meta.emptyText(scopeText)}</p>
+      <div class="report-empty-text">
+        <strong>No ${meta.errorNoun} yet</strong>
+        <p>${meta.emptyText(scopeText)}</p>
+      </div>
     </div>`;
 }
 
@@ -1520,22 +1532,26 @@ function renderTeamTable(data) {
   const wrap = document.getElementById("teamTableWrap");
   const rows = Object.entries(data.perSheet)
     .map(([key, s]) => {
+      const num = (v) => `<td class="num${v === 0 ? " is-zero" : ""}">${fmt(v)}</td>`;
+      const source =
+        data.sources[key] === "live" ? '<span class="source-live">Live</span>' : badgeHTML(data.sources[key]);
       return `
       <tr data-team-key="${key}" tabindex="0" role="button" aria-label="View ${s.name}">
-        <td>${s.name}</td>
-        <td class="num">${s.pending}</td>
-        <td class="num">${s.in_progress}</td>
-        <td class="num">${s.completed}</td>
-        <td class="num">${s.total}</td>
-        <td class="num">${tasksThisWeekCount(data, key)}</td>
-        <td>${badgeHTML(data.sources[key])}</td>
+        <td class="team-name">${s.name}</td>
+        ${num(s.pending)}
+        ${num(s.in_progress)}
+        ${num(s.completed)}
+        ${num(s.total)}
+        ${num(tasksThisWeekCount(data, key))}
+        <td>${source}</td>
+        <td class="row-go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></td>
       </tr>`;
     })
     .join("");
   wrap.innerHTML = `
     <table class="data-table clickable-rows">
       <thead>
-        <tr><th>Team</th><th class="num">Pending</th><th class="num">In Progress</th><th class="num">Completed</th><th class="num">Total</th><th class="num">Tasks This Week</th><th>Source</th></tr>
+        <tr><th>Team</th><th class="num">Pending</th><th class="num">In progress</th><th class="num">Completed</th><th class="num">Total</th><th class="num">This week</th><th>Source</th><th aria-hidden="true"></th></tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>`;
@@ -1568,6 +1584,7 @@ let taskSearchText = "";
 // another.
 let taskOwnerFilters = new Set();
 let taskStatusFilter = "";
+let taskPortalFilter = "";
 // Which sheet tab to show, for a team whose tasks span more than one (e.g.
 // Finance's "Daily" and "Weekly" tabs) — "" means show every sub-tab
 // together. Reset whenever loadTaskList() runs, since sub-tabs are specific
@@ -1591,6 +1608,7 @@ async function loadTaskList(scope) {
   // show it.
   if (scope === "total") return;
   currentSubTab = "";
+  taskPortalFilter = "";
   const requestId = ++taskListRequestSeq;
   taskListLoading = true;
   renderTaskListTable();
@@ -1696,6 +1714,7 @@ function filteredTaskList() {
   const filtered = taskListData.filter((t) => {
     if (currentSubTab && t.subTab !== currentSubTab) return false;
     if (taskStatusFilter && t.status !== taskStatusFilter) return false;
+    if (taskPortalFilter && t.portal !== taskPortalFilter) return false;
     if (taskOwnerFilters.size > 0) {
       const names = splitOwners(t.assignedTo);
       if (!names.some((n) => taskOwnerFilters.has(n))) return false;
@@ -1734,7 +1753,8 @@ function renderTaskListTable() {
   renderOwnerFilterChips();
 
   if (taskListLoading) {
-    wrap.innerHTML = `<p class="empty-note loading-note"><span class="loading-spinner" aria-hidden="true"></span> Loading tasks…</p>`;
+    const skeletonRow = `<div class="skeleton-row"><span class="sk sk-title"></span><span class="sk sk-owner"></span><span class="sk sk-badge"></span><span class="sk sk-date"></span></div>`;
+    wrap.innerHTML = `<div class="skeleton-list" role="status" aria-label="Loading tasks">${skeletonRow.repeat(6)}</div>`;
     countEl.textContent = "";
     return;
   }
@@ -1783,6 +1803,13 @@ function renderTaskListTable() {
       </thead>
       <tbody>${rows}</tbody>
     </table>`;
+
+  wrap.querySelectorAll(".portal-badge[data-portal]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      taskPortalFilter = taskPortalFilter === btn.dataset.portal ? "" : btn.dataset.portal;
+      renderTaskListTable();
+    });
+  });
 
   wrap.querySelectorAll(".badge-btn").forEach((btn) => {
     btn.addEventListener("click", () => toggleStatusFilter(btn.dataset.status));
