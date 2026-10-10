@@ -613,6 +613,23 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
+@media (min-width: 1081px) {
+  .stat-row { gap: 14px 12px; }
+  .stat-tile { transition-duration: 0.35s; }
+  .stat-tile:nth-child(1) { transform: rotate(0.6deg); z-index: 1; }
+  .stat-tile:nth-child(2) { transform: rotate(-0.5deg) translateY(5px); z-index: 2; }
+  .stat-tile:nth-child(3) { transform: rotate(0.8deg); z-index: 1; }
+  .stat-tile:nth-child(4) { transform: rotate(-0.7deg) translateY(-3px); margin-top: -6px; z-index: 3; }
+  .stat-tile:nth-child(5) { transform: rotate(0.5deg) translateY(2px); margin-top: -6px; z-index: 2; }
+  .stat-tile:nth-child(6) { transform: rotate(-0.6deg); margin-top: -6px; z-index: 3; }
+  /* Overrides only the base hover's transform/z-index (set above with !important
+     for that reason) — the base rule's spotlight background-image, border-color
+     and box-shadow still apply underneath, unchanged. */
+  .stat-tile:hover {
+    transform: rotate(0deg) translateY(-5px) scale(1.015) !important;
+    z-index: 10 !important;
+  }
+}
 .stat-tile {
   position: relative;
   display: flex;
@@ -1653,6 +1670,25 @@ button.badge-btn.active { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 
   .section-nav a::after { display: none; }
   .viz-root { padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
 }
+
+.bento-row { display: contents; }
+@media (min-width: 1100px) {
+  .bento-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+    align-items: start;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+  .bento-row > .panel { margin-bottom: 0; }
+  /* The reminder row is built for 3-across (repeat(auto-fit, minmax(230px,
+     1fr))); inside this narrower sidebar column it only has room for one,
+     so it already stacks correctly with zero extra rules needed. */
+}
+/* Reminders is hidden entirely on the Total scope (see renderScopedContent
+   in app.js) — without this, the Report panel would be left stranded in
+   the narrow left column with a dead gap beside it. */
+.bento-row:has(#reminderPanel[hidden]) { grid-template-columns: 1fr; }
 
 /* ---- Overview: completion ring beside the status tiles ---- */
 .overview {
