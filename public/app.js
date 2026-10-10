@@ -673,7 +673,7 @@ function renderScopedView(data) {
   resetReportPanel(scopedView(data).label);
 }
 
-const REPORT_EMPTY_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>`;
+const REPORT_EMPTY_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>`;
 
 // One place to add a new report mode: button/loading/error copy + the empty-state blurb.
 const REPORT_MODE_META = {
@@ -1137,7 +1137,7 @@ function renderStatTiles(view) {
     }
     tile.innerHTML = `
       <div class="label">
-        <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${STATUS_ICON[status]}</svg></span>
+        <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${STATUS_ICON[status]}</svg></span>
         <span class="label-text">${label}</span>
       </div>
       <div class="value-row">
@@ -2178,3 +2178,30 @@ function renderHeaderDate() {
   el.textContent = `${now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })} · Week ${week}`;
 }
 renderHeaderDate();
+
+// Scroll reveal: the first time a .panel / .overview crosses into view it
+// gets .is-visible (see .scroll-reveal in styles.css), then stops being
+// watched. Re-run whenever a full render adds new top-level sections.
+let scrollRevealObserver = null;
+function initScrollReveal() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (!scrollRevealObserver) {
+    scrollRevealObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          entry.target.classList.add("is-visible");
+          scrollRevealObserver.unobserve(entry.target);
+        }
+      },
+      { rootMargin: "0px 0px -8% 0px", threshold: 0.08 }
+    );
+  }
+  document.querySelectorAll(".overview, .panel").forEach((el) => {
+    if (el.classList.contains("scroll-reveal") || el.classList.contains("is-visible")) return;
+    el.classList.add("scroll-reveal");
+    scrollRevealObserver.observe(el);
+  });
+}
+document.addEventListener("DOMContentLoaded", initScrollReveal);
+if (document.readyState !== "loading") initScrollReveal();
