@@ -1,5 +1,6 @@
 import { gzipSync, gunzipSync } from "node:zlib";
 import { getDb } from "../lib/mongoClient.js";
+import { ensureSnapshotIndex, snapshotExpiresAt } from "../lib/snapshotStore.js";
 
 const COLLECTION = "snapshots";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -31,6 +32,7 @@ export default async function handler(req, res) {
   let col;
   try {
     col = (await getDb()).collection(COLLECTION);
+    await ensureSnapshotIndex(col);
   } catch (err) {
     res.status(500).json({ error: err.message });
     return;
@@ -122,7 +124,11 @@ export default async function handler(req, res) {
     }
 
     const data = gzipSync(Buffer.from(JSON.stringify(sheets), "utf8"));
-    await col.updateOne({ _id: date }, { $set: { data, createdAt: new Date() } }, { upsert: true });
+    await col.updateOne(
+      { _id: date },
+      { $set: { data, createdAt: new Date(), expiresAt: snapshotExpiresAt() } },
+      { upsert: true }
+    );
     res.status(200).json({ ok: true, date, teams: Object.keys(sheets) });
   } catch (err) {
     console.error("[admin-seed-snapshot] failed:", err);

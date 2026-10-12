@@ -42,6 +42,10 @@ export const SHEETS = [
     // reliability problems.
     csvUrl: "https://docs.google.com/spreadsheets/d/17GmwobGGZOUUUL1v9SNW4sW7VDHh5hthy_lTCx47eCI/export?format=csv&gid=0",
     appScriptUrl: "",
+    // A standing boilerplate line the team re-logs most weeks, not a real
+    // distinct task — excluded everywhere (task list, status counts, EOW
+    // chronic tracker) instead of inflating all three every week.
+    excludeTitles: ["Complete pending tasks from last week"],
   },
   {
     key: "rnd",
