@@ -138,10 +138,14 @@ function render(data) {
   }
 
   renderTabs(data);
-  renderScopedView(data);
-  renderFooter(data);
+  // Week/day pickers must be populated BEFORE renderScopedView(), which
+  // restores the saved report keyed by the picker's current value — on first
+  // load they were still empty, so the restore looked up "no week" and the
+  // saved report only appeared after clicking around.
   populateWeekSelect(data);
   populateDaySelect(data);
+  renderScopedView(data);
+  renderFooter(data);
   loadTaskList(currentScope);
 
   showUpdatedAt(data.generatedAt);
@@ -1916,6 +1920,16 @@ document.querySelectorAll("#reportModeToggle .seg-btn").forEach((btn) => {
     document.getElementById("reportDaySelect").hidden = m !== "eod";
     const scopeLabel = currentScope === "total" ? "Total" : currentData.perSheet[currentScope].name;
     resetReportPanel(scopeLabel);
+  });
+});
+
+// Picking a different week/day restores that period's saved report (or shows
+// the empty state) — without this, the picker changed but the panel kept
+// showing whatever was there until the mode toggle was clicked.
+["reportWeekSelect", "reportDaySelect"].forEach((id) => {
+  document.getElementById(id).addEventListener("change", () => {
+    if (!currentData) return;
+    resetReportPanel(scopedView(currentData).label);
   });
 });
 
