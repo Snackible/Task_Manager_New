@@ -528,6 +528,10 @@ body {
   white-space: nowrap;
 }
 #dateRangeSelect { max-width: 160px; }
+.custom-range-inputs[hidden] { display: none; }
+.custom-range-inputs { display: flex; align-items: center; gap: 6px; }
+.custom-range-inputs .text-input { max-width: 142px; }
+.custom-range-sep { color: var(--text-muted); font-size: 13px; }
 .tab-indicator {
   position: absolute;
   top: 4px;
@@ -1470,8 +1474,10 @@ button.badge-btn.active { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 
 
   .control-row { flex-direction: column; align-items: stretch; gap: 10px; }
   .tab-bar { width: 100%; }
-  .date-range-row { width: 100%; justify-content: space-between; }
+  .date-range-row { width: 100%; flex-wrap: wrap; justify-content: space-between; }
   .date-range-row .select-input { flex: 1; }
+  .custom-range-inputs { width: 100%; }
+  .custom-range-inputs .text-input { flex: 1; max-width: none; min-width: 0; }
 
   /* Panel chrome: less padding, and the header rule's negative-margin pullout
      (see .panel-header) needs to shrink by the same amount or it stops

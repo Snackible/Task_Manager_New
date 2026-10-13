@@ -110,10 +110,17 @@
           <option value="all">All time</option>
           <option value="today">Today</option>
           <option value="week" selected>This week</option>
+          <option value="lastweek">Last week</option>
           <option value="month">This month</option>
           <option value="7d">Last 7 days</option>
           <option value="30d">Last 30 days</option>
+          <option value="custom">Custom range</option>
         </select>
+        <span class="custom-range-inputs" id="customRangeInputs" hidden>
+          <input type="date" class="text-input" id="customRangeStart" aria-label="Custom range start date">
+          <span class="custom-range-sep" aria-hidden="true">&ndash;</span>
+          <input type="date" class="text-input" id="customRangeEnd" aria-label="Custom range end date">
+        </span>
       </div>
     </div>
 

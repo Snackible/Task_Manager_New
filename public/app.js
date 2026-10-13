@@ -293,6 +293,25 @@ function dateRangeBounds(range) {
     end.setUTCDate(end.getUTCDate() + 6);
     return { start, end };
   }
+  if (range === "lastweek") {
+    const thisWeekStart = isoWeekStartClient(today);
+    const start = new Date(thisWeekStart);
+    start.setUTCDate(start.getUTCDate() - 7);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 6);
+    return { start, end };
+  }
+  if (range === "custom") {
+    const startVal = document.getElementById("customRangeStart").value;
+    const endVal = document.getElementById("customRangeEnd").value;
+    if (!startVal || !endVal) return null; // incomplete — behave like "All time" until both are picked
+    const start = new Date(`${startVal}T00:00:00Z`);
+    const end = new Date(`${endVal}T00:00:00Z`);
+    // A start picked after the end would otherwise silently return an
+    // inverted (always-empty) range — swap rather than leave the user
+    // staring at zero results with no indication why.
+    return start.getTime() <= end.getTime() ? { start, end } : { start: end, end: start };
+  }
   if (range === "month") {
     const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
     const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0));
@@ -1905,9 +1924,20 @@ document.querySelectorAll("#granularityToggle .seg-btn").forEach((btn) => {
 
 document.getElementById("dateRangeSelect").addEventListener("change", (e) => {
   currentDateRange = e.target.value;
+  document.getElementById("customRangeInputs").hidden = currentDateRange !== "custom";
   if (!currentData) return;
   renderScopedContent(currentData); // stat tiles + chart
   renderTaskListTable(); // tasks table — same shared filter, no refetch needed
+});
+
+// Re-filter live as either custom-range date is picked, same as any other
+// Period option — no separate "Apply" step.
+["customRangeStart", "customRangeEnd"].forEach((id) => {
+  document.getElementById(id).addEventListener("change", () => {
+    if (!currentData || currentDateRange !== "custom") return;
+    renderScopedContent(currentData);
+    renderTaskListTable();
+  });
 });
 
 document.querySelectorAll("#reportModeToggle .seg-btn").forEach((btn) => {
