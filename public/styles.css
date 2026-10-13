@@ -1539,7 +1539,7 @@ button.badge-btn.active { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 
   justify-content: flex-start;
   align-items: center;
   gap: 13px;
-  padding: 14px 16px 14px 14px;
+  padding: 12px 16px 12px 14px;
   border-radius: 16px;
   text-align: left;
   background: var(--panel-raised);
@@ -1574,9 +1574,8 @@ button.badge-btn.active { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 
   color: var(--accent-violet);
 }
 .reminder-icon-chip svg { width: 17px; height: 17px; }
-.reminder-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.reminder-text strong { font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.reminder-text small { font-family: var(--font-body); font-size: 12.5px; font-weight: 400; color: var(--text-muted); line-height: 1.4; }
+.reminder-text { display: flex; flex-direction: column; justify-content: center; flex: 1; min-width: 0; }
+.reminder-text strong { font-size: 15px; font-weight: 600; color: var(--text-primary); }
 .reminder-go { width: 16px; height: 16px; flex: none; color: var(--text-muted); transition: color 0.2s var(--ease), transform 0.2s var(--ease); }
 .btn-reminder:hover .reminder-go { color: #25d366; transform: translate(2px, -2px); }
 
