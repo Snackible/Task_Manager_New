@@ -2,10 +2,13 @@
 // been categorized yet, which reads as a more basic gap than "pending" (see
 // statusUtils.js: blank used to silently become "pending," which hid that
 // gap entirely).
-const STATUS_ORDER = ["completed", "in_progress", "awaiting_approval", "pending", "overdue", "no_status"];
+const STATUS_ORDER = ["completed", "standing", "in_progress", "awaiting_approval", "pending", "overdue", "no_status"];
 // 24x24 stroke glyphs for each status card's icon chip.
 const STATUS_ICON = {
   completed: '<path d="M20 6 9 17l-5-5"/>',
+  // A loop/cycle glyph — "Standing" covers Recurring/Revisions, statuses a
+  // team sets once and never updates because the work just keeps repeating.
+  standing: '<path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a6 6 0 0 1 6-6h12"/><path d="M7 21.9 3 18l4-3.9"/><path d="M21 13v2a6 6 0 0 1-6 6H3"/>',
   in_progress: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   awaiting_approval: '<path d="M7 3h10v4l-5 5 5 5v4H7v-4l5-5-5-5z"/>',
   pending: '<circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/>',
@@ -18,6 +21,7 @@ const STATUS_COLOR = {
   pending: "var(--status-pending)",
   awaiting_approval: "var(--status-awaiting-approval)",
   in_progress: "var(--status-in-progress)",
+  standing: "var(--status-standing)",
   completed: "var(--status-completed)",
 };
 // Resolved (non-variable) colors, needed for SVG fill attrs in some browsers.
@@ -31,6 +35,7 @@ const STATUS_GRADIENT_ID = {
   pending: "gradPending",
   awaiting_approval: "gradAwaitingApproval",
   in_progress: "gradInProgress",
+  standing: "gradStanding",
   completed: "gradCompleted",
 };
 
@@ -1125,7 +1130,7 @@ async function generateReport() {
 }
 
 // Does a rising count mean things are getting better or worse, per status?
-const DELTA_UP_IS_GOOD = { overdue: false, pending: false, in_progress: null, completed: true };
+const DELTA_UP_IS_GOOD = { overdue: false, pending: false, in_progress: null, standing: null, completed: true };
 
 function renderStatTiles(view) {
   const row = document.getElementById("statRow");

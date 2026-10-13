@@ -61,6 +61,7 @@
   --fill-pending:            #4f86cc;
   --fill-awaiting-approval:  #3fa99e;
   --fill-in-progress:        #d2a044;
+  --fill-standing:           #7a6fc4;
   --fill-completed:          #57a04e;
 
   /* Reuses --text-muted rather than its own hex: "no status" means nobody
@@ -72,6 +73,7 @@
   --status-pending:            #2f6cba; /* categorical blue: not yet started */
   --status-awaiting-approval:  #12877d; /* categorical teal: done, waiting on someone else's sign-off */
   --status-in-progress:        #c98a10; /* status warning: actively being worked */
+  --status-standing:           #5b4fc4; /* categorical indigo: a status that holds steady by design (Recurring/Revisions) — distinct from --accent-violet, which is UI chrome only */
   --status-completed:          #1d8a38; /* status good */
   --status-serious:      #ec835a; /* mode-invariant: used only for "bad" deltas, distinct from the swatches above */
   --status-overdue:      #c13d3d; /* mode-invariant: status "critical" — incomplete work past its deadline */
@@ -106,6 +108,7 @@
     --status-pending:            #3987e5;
     --status-awaiting-approval:  #2dd4bf;
     --status-in-progress:        #fab219;
+    --status-standing:           #8b7cf6;
     --status-completed:          #22b422;
     --accent-violet:       #9085e9;
   }
@@ -134,6 +137,7 @@
   --status-pending:            #3987e5;
   --status-awaiting-approval:  #2dd4bf;
   --status-in-progress:        #fab219;
+  --status-standing:           #8b7cf6;
   --status-completed:          #22b422;
   --accent-violet:       #9085e9;
 }
@@ -1201,6 +1205,7 @@ button.badge-btn.active { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 
 .badge.pending { color: var(--status-pending); border-color: var(--status-pending); background: color-mix(in srgb, var(--status-pending) 12%, transparent); }
 .badge.awaiting_approval { color: var(--status-awaiting-approval); border-color: var(--status-awaiting-approval); background: color-mix(in srgb, var(--status-awaiting-approval) 12%, transparent); }
 .badge.in_progress { color: var(--status-in-progress); border-color: var(--status-in-progress); background: color-mix(in srgb, var(--status-in-progress) 16%, transparent); }
+.badge.standing { color: var(--status-standing); border-color: var(--status-standing); background: color-mix(in srgb, var(--status-standing) 14%, transparent); }
 .badge.completed { color: var(--status-completed); border-color: var(--status-completed); background: color-mix(in srgb, var(--status-completed) 12%, transparent); }
 
 .page-footer {
