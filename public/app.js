@@ -186,13 +186,26 @@ function isoWeekStartClient(date) {
   return d;
 }
 
-/** Today, as a UTC-midnight Date representing the browser's LOCAL calendar
- * day — mirrors the server's todayIST() (lib/dateUtils.js). Reading UTC
- * getters off `new Date()` instead made "today" silently roll back a day
- * for the ~5.5 hours after local midnight in IST, since UTC lags IST. */
+// Same pattern as the server's todayIST() (lib/dateUtils.js) — reading the
+// calendar date in Asia/Kolkata explicitly, not off the viewer's own device
+// clock. Previously used the browser's local timezone (via `new
+// Date().getFullYear()` etc.), which happened to agree with IST for anyone
+// actually sitting in India but silently didn't for a traveling team member
+// or a misconfigured device clock — "This week"/"Today" rolling over at
+// THEIR midnight instead of IST's. Every "today"-based client UI (the week
+// and day pickers, the Today/This week Period filter, the relative task-date
+// labels) reads this, so it's all the same IST "today" the dashboard's own
+// data and the server's overdue logic already use, every time.
+const IST_PARTS_FORMAT_CLIENT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Kolkata",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 function localToday() {
-  const now = new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const parts = IST_PARTS_FORMAT_CLIENT.formatToParts(new Date());
+  const get = (type) => +parts.find((p) => p.type === type).value;
+  return new Date(Date.UTC(get("year"), get("month") - 1, get("day")));
 }
 
 function populateWeekSelect(data) {
@@ -476,18 +489,40 @@ function rollNumber(el, key, to, format = (n) => String(n)) {
   requestAnimationFrame(tick);
 }
 
-/** Completion waffle: a 10x10 grid where every square is 1% of the tasks,
+// Below this, one square IS one real task — exact, no fabricated precision
+// for a team with a handful of items (the old version always drew 100
+// squares regardless of total, so a 14-task week rendered as if it were a
+// ~0.14-task-per-square percentage bar wearing a waffle costume). Above the
+// cap, 100 squares is the only way to stay legible for a large total, so
+// cells go proportional there instead — and say so, rather than looking
+// exact when it isn't.
+const WAFFLE_EXACT_CAP = 100;
+
+/** Completion waffle: one square per task up to WAFFLE_EXACT_CAP tasks,
  * filled in status order (completed first) in the same colours as the cards
- * beside it. */
+ * beside it; a proportional 100-square grid above the cap. */
 function renderHero(view) {
   const el = document.getElementById("heroCard");
   const total = STATUS_ORDER.reduce((sum, s) => sum + (view.totals[s] || 0), 0);
   const done = view.totals.completed || 0;
   const pct = total ? Math.round((done / total) * 100) : 0;
+  const isExact = total > 0 && total <= WAFFLE_EXACT_CAP;
+  const cellCount = isExact ? total : 100;
+  // Columns stay fixed at <=10 so cells wrap into rows the way CSS grid
+  // actually wraps (implicit rows under a fixed column count, not items
+  // overflowing one explicit row) — a 14-cell exact grid is 10+4, not one
+  // 14-wide row spilling out of the card.
+  const cols = Math.min(cellCount || 10, 10);
 
-  // Largest-remainder rounding so the 100 squares always add up exactly.
   const cells = [];
-  if (total) {
+  if (isExact) {
+    // One cell per real task — nothing to round, nothing to approximate.
+    for (const s of STATUS_ORDER) {
+      const n = view.totals[s] || 0;
+      for (let i = 0; i < n; i++) cells.push(s);
+    }
+  } else if (total) {
+    // Largest-remainder rounding so the 100 squares always add up exactly.
     const raw = STATUS_ORDER.map((s) => ({ s, exact: ((view.totals[s] || 0) / total) * 100 }));
     raw.forEach((r) => (r.n = Math.floor(r.exact)));
     let left = 100 - raw.reduce((sum, r) => sum + r.n, 0);
@@ -496,11 +531,13 @@ function renderHero(view) {
     });
     raw.forEach((r) => { for (let i = 0; i < r.n; i++) cells.push(r.s); });
   }
-  const squares = Array.from({ length: 100 }, (_, i) => {
+  const perSquare = total / cellCount || 0;
+  const squares = Array.from({ length: cellCount }, (_, i) => {
     const s = cells[i];
-    const label = s ? currentData.statusLabels[s] : "No tasks";
+    const label = !s ? "No tasks" : isExact ? `1 task — ${currentData.statusLabels[s]}` : `~${perSquare.toFixed(1)} tasks — ${currentData.statusLabels[s]}`;
     return `<i class="waffle-cell${s ? "" : " is-empty"}" style="--i:${i}${s ? `;background:${STATUS_COLOR[s]}` : ""}" title="${escapeHTML(label)}"></i>`;
   }).join("");
+  const scaleNote = total && !isExact ? ` (1 square ≈ ${perSquare.toFixed(1)} tasks)` : "";
 
   const rangeSelect = document.getElementById("dateRangeSelect");
   const rangeText = rangeSelect && rangeSelect.selectedOptions[0] ? rangeSelect.selectedOptions[0].textContent : "";
@@ -509,7 +546,7 @@ function renderHero(view) {
       <span class="hero-pct"><span class="hero-pct-num">${total ? pct : "—"}</span>${total ? "<small>%</small>" : ""}</span>
       <span class="hero-pct-label">complete</span>
     </div>
-    <div class="waffle" role="img" aria-label="${pct}% of ${total} tasks complete">${squares}</div>
+    <div class="waffle" style="--waffle-cols:${cols}" role="img" aria-label="${pct}% of ${total} tasks complete${scaleNote}">${squares}</div>
     <div class="hero-meta">
       <span class="hero-kicker">${escapeHTML(view.label)} · ${escapeHTML(rangeText)}</span>
       <span class="hero-count"><b>${fmt(done)}</b> of ${fmt(total)} tasks done</span>
@@ -673,15 +710,6 @@ window.addEventListener("scroll", () => {
     updateActiveSection();
   });
 }, { passive: true });
-
-// Spotlight glow on the stat tiles follows the cursor (see .stat-tile:hover).
-document.getElementById("statRow").addEventListener("mousemove", (e) => {
-  const tile = e.target.closest(".stat-tile");
-  if (!tile) return;
-  const r = tile.getBoundingClientRect();
-  tile.style.setProperty("--mx", `${e.clientX - r.left}px`);
-  tile.style.setProperty("--my", `${e.clientY - r.top}px`);
-});
 
 document.getElementById("sectionNav").addEventListener("click", (e) => {
   const a = e.target.closest("a[data-target]");
